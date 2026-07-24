@@ -104,7 +104,7 @@
     margin-top:16px; max-height:0; overflow:hidden; opacity:0;
     transition:max-height .2s ease, opacity .2s ease;
   }
-  .preview-wrap.show{max-height:260px; opacity:1;}
+  .preview-wrap.show{max-height:280px; opacity:1;}
   .preview{
     font-size:11px; color:var(--ink-soft); word-break:break-all;
     background:#eae4d3; border:1px solid var(--paper-line);
@@ -167,11 +167,11 @@
     <div class="row2">
       <div class="field">
         <label for="lat">Latitude</label>
-        <input id="lat" type="text" inputmode="decimal" placeholder="52.2681" autocomplete="off"/>
+        <input id="lat" type="text" inputmode="decimal" placeholder="52.2690628" autocomplete="off"/>
       </div>
       <div class="field">
         <label for="lng">Longitude</label>
-        <input id="lng" type="text" inputmode="decimal" placeholder="-113.8112" autocomplete="off"/>
+        <input id="lng" type="text" inputmode="decimal" placeholder="-113.8141464" autocomplete="off"/>
       </div>
     </div>
 
@@ -186,7 +186,18 @@
         </div>
         <div class="field">
           <label for="gl">Country (gl) — overrides picker</label>
-          <input id="gl" type="text" placeholder="ca" autocomplete="off"/>
+          <input id="gl" type="text" placeholder="CA" autocomplete="off"/>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="radius">Location radius</label>
+          <input id="radius" type="text" inputmode="numeric" value="93000" autocomplete="off"/>
+          <div class="hint">How tightly the search is pinned to the point. 93000 is a good city-block-level default; larger values behave like a wider area.</div>
+        </div>
+        <div class="field">
+          <label for="num">Results per page (num)</label>
+          <input id="num" type="text" inputmode="numeric" placeholder="10" autocomplete="off"/>
         </div>
       </div>
       <div class="field">
@@ -194,16 +205,7 @@
         <input id="canonical" type="text" placeholder="Red Deer,Alberta,Canada" autocomplete="off"/>
         <div class="hint">Only used when lat/lng are empty. Format must match Google Ads' geo-target list exactly: City,Region,Country.</div>
       </div>
-      <div class="row2">
-        <div class="field">
-          <label for="num">Results per page (num)</label>
-          <input id="num" type="text" inputmode="numeric" placeholder="10" autocomplete="off"/>
-        </div>
-        <div class="field">
-          <label for="device">&nbsp;</label>
-          <div class="hint" style="margin-top:0">Personalization is always disabled via <code>pws=0</code>.</div>
-        </div>
-      </div>
+      <div class="hint">Personalization is always disabled via <code>pws=0</code>; <code>ie</code>/<code>oe</code> are pinned to utf-8.</div>
     </details>
 
     <button class="go" id="goBtn">Search this location →</button>
@@ -214,7 +216,7 @@
         <button id="copyBtn" type="button">Copy URL</button>
         <button id="openBtn" type="button">Open in new tab</button>
       </div>
-      <div class="incog-hint" id="incogHint">
+      <div class="incog-hint">
         For a clean, logged-out view: right-click the link above →
         “Open link in incognito window” (Chrome/Edge) or “Open in new private window” (Firefox),
         or copy the URL into a private window. Pages can’t launch incognito windows themselves —
@@ -225,8 +227,8 @@
 
   <p class="note">
     <strong>How it works:</strong> with coordinates set, the tool encodes an
-    <code>a+</code>-type <code>uule</code> — a base64 of a small location record
-    (role, producer, provenance, a timestamp, and the lat/lng in E7 fixed-point) —
+    <code>a+</code>-type <code>uule</code> — a standard-base64 blob of a small location record
+    (role, producer, provenance, a timestamp, the lat/lng in E7 fixed-point, and a radius) —
     which pins the search to an exact point, the same way ad-preview tooling does.
     Without coordinates it falls back to the older <code>w+</code> canonical-name encoding.
     To verify what Google thinks, search for <em>where am i</em> and check the map onebox,
@@ -241,46 +243,45 @@
 <script>
 /* ---------- Region & language presets (gl / hl pairs) ---------- */
 const REGIONS = [
-  {label:"Canada — English",        gl:"ca", hl:"en"},
-  {label:"Canada — Français",       gl:"ca", hl:"fr"},
-  {label:"United States — English", gl:"us", hl:"en"},
-  {label:"United States — Español", gl:"us", hl:"es"},
-  {label:"United Kingdom — English",gl:"uk", hl:"en"},
-  {label:"Ireland — English",       gl:"ie", hl:"en"},
-  {label:"Australia — English",     gl:"au", hl:"en"},
-  {label:"New Zealand — English",   gl:"nz", hl:"en"},
-  {label:"Germany — Deutsch",       gl:"de", hl:"de"},
-  {label:"Austria — Deutsch",       gl:"at", hl:"de"},
-  {label:"Switzerland — Deutsch",   gl:"ch", hl:"de"},
-  {label:"Switzerland — Français",  gl:"ch", hl:"fr"},
-  {label:"France — Français",       gl:"fr", hl:"fr"},
-  {label:"Belgium — Nederlands",    gl:"be", hl:"nl"},
-  {label:"Belgium — Français",      gl:"be", hl:"fr"},
-  {label:"Netherlands — Nederlands",gl:"nl", hl:"nl"},
-  {label:"Spain — Español",         gl:"es", hl:"es"},
-  {label:"Portugal — Português",    gl:"pt", hl:"pt"},
-  {label:"Italy — Italiano",        gl:"it", hl:"it"},
-  {label:"Sweden — Svenska",        gl:"se", hl:"sv"},
-  {label:"Norway — Norsk",          gl:"no", hl:"no"},
-  {label:"Denmark — Dansk",         gl:"dk", hl:"da"},
-  {label:"Finland — Suomi",         gl:"fi", hl:"fi"},
-  {label:"Poland — Polski",         gl:"pl", hl:"pl"},
-  {label:"Czechia — Čeština",       gl:"cz", hl:"cs"},
-  {label:"Turkey — Türkçe",         gl:"tr", hl:"tr"},
-  {label:"Brazil — Português",      gl:"br", hl:"pt-BR"},
-  {label:"Mexico — Español",        gl:"mx", hl:"es"},
-  {label:"Argentina — Español",     gl:"ar", hl:"es"},
-  {label:"India — English",         gl:"in", hl:"en"},
-  {label:"India — हिन्दी",           gl:"in", hl:"hi"},
-  {label:"Japan — 日本語",           gl:"jp", hl:"ja"},
-  {label:"South Korea — 한국어",     gl:"kr", hl:"ko"},
-  {label:"Singapore — English",     gl:"sg", hl:"en"},
-  {label:"South Africa — English",  gl:"za", hl:"en"},
-  {label:"United Arab Emirates — English", gl:"ae", hl:"en"},
-  {label:"United Arab Emirates — العربية", gl:"ae", hl:"ar"},
-  {label:"Israel — עברית",           gl:"il", hl:"iw"},
-  {label:"Russia — Русский",        gl:"ru", hl:"ru"},
-  {label:"Ukraine — Українська",    gl:"ua", hl:"uk"},
+  {label:"Canada — English",        gl:"CA", hl:"en"},
+  {label:"Canada — Français",       gl:"CA", hl:"fr"},
+  {label:"United States — English", gl:"US", hl:"en"},
+  {label:"United States — Español", gl:"US", hl:"es"},
+  {label:"United Kingdom — English",gl:"UK", hl:"en"},
+  {label:"Ireland — English",       gl:"IE", hl:"en"},
+  {label:"Australia — English",     gl:"AU", hl:"en"},
+  {label:"New Zealand — English",   gl:"NZ", hl:"en"},
+  {label:"Germany — Deutsch",       gl:"DE", hl:"de"},
+  {label:"Austria — Deutsch",       gl:"AT", hl:"de"},
+  {label:"Switzerland — Deutsch",   gl:"CH", hl:"de"},
+  {label:"Switzerland — Français",  gl:"CH", hl:"fr"},
+  {label:"France — Français",       gl:"FR", hl:"fr"},
+  {label:"Belgium — Nederlands",    gl:"BE", hl:"nl"},
+  {label:"Belgium — Français",      gl:"BE", hl:"fr"},
+  {label:"Netherlands — Nederlands",gl:"NL", hl:"nl"},
+  {label:"Spain — Español",         gl:"ES", hl:"es"},
+  {label:"Portugal — Português",    gl:"PT", hl:"pt"},
+  {label:"Italy — Italiano",        gl:"IT", hl:"it"},
+  {label:"Sweden — Svenska",        gl:"SE", hl:"sv"},
+  {label:"Norway — Norsk",          gl:"NO", hl:"no"},
+  {label:"Denmark — Dansk",         gl:"DK", hl:"da"},
+  {label:"Finland — Suomi",         gl:"FI", hl:"fi"},
+  {label:"Poland — Polski",         gl:"PL", hl:"pl"},
+  {label:"Czechia — Čeština",       gl:"CZ", hl:"cs"},
+  {label:"Turkey — Türkçe",         gl:"TR", hl:"tr"},
+  {label:"Brazil — Português",      gl:"BR", hl:"pt-BR"},
+  {label:"Mexico — Español",        gl:"MX", hl:"es"},
+  {label:"Argentina — Español",     gl:"AR", hl:"es"},
+  {label:"India — English",         gl:"IN", hl:"en"},
+  {label:"India — हिन्दी",           gl:"IN", hl:"hi"},
+  {label:"Japan — 日本語",           gl:"JP", hl:"ja"},
+  {label:"South Korea — 한국어",     gl:"KR", hl:"ko"},
+  {label:"Singapore — English",     gl:"SG", hl:"en"},
+  {label:"South Africa — English",  gl:"ZA", hl:"en"},
+  {label:"United Arab Emirates — English", gl:"AE", hl:"en"},
+  {label:"United Arab Emirates — العربية", gl:"AE", hl:"ar"},
+  {label:"Israel — עברית",           gl:"IL", hl:"iw"},
+  {label:"Ukraine — Українська",    gl:"UA", hl:"uk"},
 ];
 
 const regionSelect = document.getElementById('region');
@@ -292,9 +293,11 @@ REGIONS.forEach((r, i) => {
 });
 regionSelect.value = 0; // default: Canada — English
 
-/* ---------- UULE encoding ---------- */
+/* ---------- UULE encoding ----------
+   IMPORTANT: Google expects STANDARD base64 here (with +, /, = intact),
+   not the URL-safe alphabet. The '=' padding gets percent-encoded to %3D
+   in the final URL; the 'a+'/'w+' prefix keeps a literal '+'.            */
 
-// Base64 helper that survives non-ASCII bytes
 function bytesToBase64(bytes){
   let binary = '';
   bytes.forEach(b => binary += String.fromCharCode(b));
@@ -323,9 +326,11 @@ function buildUuleCanonical(canonicalName){
   return 'w+' + bytesToBase64(bytes);
 }
 
-// Precise: lat/lng based uule ("a+" prefix) — text-format location record,
-// base64-encoded with URL-safe alphabet. Same scheme ad-preview tools use.
-function buildUuleLatLng(lat, lng){
+// Precise: lat/lng based uule ("a+" prefix) — text-format location record.
+// Record layout (verified against a known-working URL):
+//   role:1 / producer:12 / provenance:6 / timestamp:<microseconds> /
+//   latlng{ latitude_e7 / longitude_e7 } / radius:<positive int>
+function buildUuleLatLng(lat, lng, radius){
   const latE7 = Math.round(lat * 1e7);
   const lngE7 = Math.round(lng * 1e7);
   const tsMicro = Date.now() * 1000;
@@ -338,9 +343,19 @@ function buildUuleLatLng(lat, lng){
     'latitude_e7:' + latE7 + '\n' +
     'longitude_e7:' + lngE7 + '\n' +
     '}\n' +
-    'radius:-1';
-  const b64 = btoa(record).replace(/\+/g, '-').replace(/\//g, '_');
-  return 'a+' + b64;
+    'radius:' + radius;
+  return 'a+' + btoa(record);   // standard base64 — do NOT swap + / for - _
+}
+
+// Percent-encode a uule value for the URL while keeping the prefix '+' literal,
+// exactly like known-working tools emit it: a+cm9s...%3D
+function uuleForUrl(uule){
+  const prefix = uule.slice(0, 2);   // 'a+' or 'w+'
+  const body = uule.slice(2)
+    .replace(/\+/g, '%2B')
+    .replace(/\//g, '%2F')
+    .replace(/=/g, '%3D');
+  return prefix + body;
 }
 
 /* ---------- Geocoding via OpenStreetMap Nominatim ---------- */
@@ -388,36 +403,40 @@ document.getElementById('loc').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); geocode(); }
 });
 
-/* ---------- URL builder ---------- */
+/* ---------- URL builder ----------
+   Assembled by hand (not URLSearchParams) so the uule keeps its literal
+   'a+' prefix, matching the format Google demonstrably accepts.          */
 function buildUrl(){
   const q = document.getElementById('q').value.trim();
   if (!q) return null;
 
   const region = REGIONS[regionSelect.value] || REGIONS[0];
-  const hlOverride = document.getElementById('hl').value.trim();
-  const glOverride = document.getElementById('gl').value.trim();
-  const hl = hlOverride || region.hl;
-  const gl = glOverride || region.gl;
+  const hl = document.getElementById('hl').value.trim() || region.hl;
+  const gl = document.getElementById('gl').value.trim() || region.gl;
 
   const lat = parseFloat(document.getElementById('lat').value);
   const lng = parseFloat(document.getElementById('lng').value);
   const canonical = document.getElementById('canonical').value.trim();
   const num = document.getElementById('num').value.trim();
+  const radiusRaw = document.getElementById('radius').value.trim();
+  const radius = /^\d+$/.test(radiusRaw) ? radiusRaw : '93000';
 
-  const params = new URLSearchParams();
-  params.set('q', q);
-  params.set('pws', '0');   // disable personalized results
-  if (hl) params.set('hl', hl);
-  if (gl) params.set('gl', gl);
+  const parts = [];
+  parts.push('q=' + encodeURIComponent(q));
+  if (hl) parts.push('hl=' + encodeURIComponent(hl));
+  if (gl) parts.push('gl=' + encodeURIComponent(gl));
+  parts.push('ie=utf-8');
+  parts.push('oe=utf-8');
+  parts.push('pws=0');   // disable personalized results
 
   if (!isNaN(lat) && !isNaN(lng)){
-    params.set('uule', buildUuleLatLng(lat, lng));
+    parts.push('uule=' + uuleForUrl(buildUuleLatLng(lat, lng, radius)));
   } else if (canonical){
-    params.set('uule', buildUuleCanonical(canonical));
+    parts.push('uule=' + uuleForUrl(buildUuleCanonical(canonical)));
   }
-  if (num && /^\d+$/.test(num)) params.set('num', num);
+  if (num && /^\d+$/.test(num)) parts.push('num=' + num);
 
-  return 'https://www.google.com/search?' + params.toString();
+  return 'https://www.google.com/search?' + parts.join('&');
 }
 
 /* ---------- Preview, copy, open ---------- */
@@ -441,7 +460,7 @@ function updatePreview(){
   }
 }
 
-['q','lat','lng','hl','gl','canonical','num'].forEach(id => {
+['q','lat','lng','hl','gl','canonical','num','radius'].forEach(id => {
   document.getElementById(id).addEventListener('input', updatePreview);
 });
 regionSelect.addEventListener('change', updatePreview);
@@ -453,7 +472,6 @@ copyBtn.addEventListener('click', async () => {
     await navigator.clipboard.writeText(url);
     copyBtn.textContent = 'Copied ✓';
   } catch {
-    // Fallback for older browsers
     const ta = document.createElement('textarea');
     ta.value = url;
     document.body.appendChild(ta);
