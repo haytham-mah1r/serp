@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Meridian — Local SERP Checker</title>
+<style>
+  :root{
+    --ink:#12181f;
+    --ink-soft:#39424c;
+    --paper:#f3efe4;
+    --paper-line:#d8d0ba;
+    --brass:#a8763a;
+    --brass-dark:#7a5426;
+    --pine:#2f4a3d;
+    --mono: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(168,118,58,0.08), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(47,74,61,0.15), transparent 45%);
+    color:var(--paper);
+    font-family:var(--mono);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:48px 20px;
+  }
+  .sheet{
+    width:100%;
+    max-width:720px;
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin-bottom:10px;
+  }
+  h1{
+    font-family:var(--serif);
+    font-weight:500;
+    font-size:2.1rem;
+    line-height:1.15;
+    margin:0 0 8px;
+    color:var(--paper);
+  }
+  .sub{
+    color:#9aa4ad;
+    font-size:14px;
+    line-height:1.6;
+    max-width:52ch;
+    margin-bottom:34px;
+  }
+  .card{
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:2px;
+    padding:28px;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6);
+    position:relative;
+  }
+  .card::before{
+    content:"";
+    position:absolute;
+    inset:8px;
+    border:1px solid var(--paper-line);
+    pointer-events:none;
+  }
+  .field{margin-bottom:18px;}
+  .field label{
+    display:block;
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:6px;
+  }
+  .field input{
+    width:100%;
+    font-family:var(--mono);
+    font-size:14px;
+    padding:10px 12px;
+    background:#fff;
+    border:1px solid var(--paper-line);
+    color:var(--ink);
+    border-radius:1px;
+  }
+  .field input:focus{
+    outline:none;
+    border-color:var(--brass);
+    box-shadow:0 0 0 3px rgba(168,118,58,0.15);
+  }
+  .row2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  .hint{
+    font-size:11px;
+    color:#8a8370;
+    margin-top:5px;
+    line-height:1.5;
+  }
+  .divider{
+    border:none;
+    border-top:1px dashed var(--paper-line);
+    margin:22px 0;
+  }
+  details summary{
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--pine);
+    cursor:pointer;
+    margin-bottom:14px;
+  }
+  .go{
+    width:100%;
+    margin-top:8px;
+    padding:13px 16px;
+    background:var(--brass-dark);
+    color:#fff;
+    border:none;
+    border-radius:1px;
+    font-family:var(--mono);
+    font-size:13px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .15s ease;
+  }
+  .go:hover{background:var(--brass);}
+  .preview{
+    margin-top:16px;
+    font-size:11px;
+    color:var(--ink-soft);
+    word-break:break-all;
+    background:#eae4d3;
+    border:1px solid var(--paper-line);
+    padding:10px 12px;
+    line-height:1.6;
+    max-height:0;
+    overflow:hidden;
+    opacity:0;
+    transition:max-height .2s ease, opacity .2s ease;
+  }
+  .preview.show{max-height:200px; opacity:1;}
+  .note{
+    font-size:12px;
+    color:#7c8590;
+    line-height:1.7;
+    margin-top:28px;
+    max-width:60ch;
+  }
+  .note strong{color:#b9c1c9;}
+  .footer-links{
+    margin-top:10px;
+    font-size:12px;
+  }
+  .footer-links a{color:var(--brass); text-decoration:none;}
+  .footer-links a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="eyebrow">Meridian · Local SERP checker</div>
+  <h1>See Google from anywhere,<br/>without leaving your desk.</h1>
+  <p class="sub">Builds a Google search URL with the <code>uule</code>, <code>hl</code>, and <code>gl</code> parameters, so results render as if the search came from another city or country. Everything runs in your browser — nothing is sent anywhere but Google.</p>
+
+  <div class="card">
+    <div class="field">
+      <label for="q">Search query</label>
+      <input id="q" type="text" placeholder="best coffee shop" autocomplete="off"/>
+    </div>
+
+    <div class="field">
+      <label for="loc">Location (Google Ads canonical name)</label>
+      <input id="loc" type="text" placeholder="Austin,Texas,United States" autocomplete="off"/>
+      <div class="hint">Format: City,Region,Country — exactly as Google Ads' geo-target list spells it. Region and country can be omitted for a broader match.</div>
+    </div>
+
+    <hr class="divider"/>
+
+    <details>
+      <summary>Advanced (language &amp; country)</summary>
+      <div class="row2">
+        <div class="field">
+          <label for="hl">Host language (hl)</label>
+          <input id="hl" type="text" placeholder="en"/>
+        </div>
+        <div class="field">
+          <label for="gl">Country (gl)</label>
+          <input id="gl" type="text" placeholder="us"/>
+        </div>
+      </div>
+    </details>
+
+    <button class="go" id="goBtn">Search this location →</button>
+    <div class="preview" id="preview"></div>
+  </div>
+
+  <p class="note">
+    <strong>How it works:</strong> the canonical name is packed into a small protocol-buffer (fields for a version marker, a producer id, and the location string), then base64-encoded into the <code>uule</code> value Google reads. This is the same mechanism Google Ads uses for geo-targeted campaigns, and the same one <code>valentin.app</code> and similar public tools use — it's a documented URL parameter, not a bypass of anything.
+  </p>
+  <div class="footer-links"><a href="https://developers.google.com/web/tools/chrome-devtools/device-mode/device-input-and-sensors" target="_blank" rel="noopener">Chrome DevTools has a native "Sensors" location override</a> if you'd rather change location at the browser level.</div>
+</div>
+
+<script>
+function encodeVarint(n){
+  const bytes = [];
+  while (true){
+    let b = n & 0x7f;
+    n >>>= 7;
+    if (n !== 0){ bytes.push(b | 0x80); } else { bytes.push(b); break; }
+  }
+  return bytes;
+}
+
+function buildUule(canonicalName){
+  const nameBytes = Array.from(new TextEncoder().encode(canonicalName));
+  const bytes = [];
+  bytes.push(0x08, 2);           // field 1 (varint) = 2
+  bytes.push(0x10, 32);          // field 2 (varint) = 32
+  bytes.push(0x22);              // field 4 (length-delimited)
+  bytes.push(...encodeVarint(nameBytes.length));
+  bytes.push(...nameBytes);
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return 'w+' + btoa(binary);
+}
+
+function buildUrl(){
+  const q = document.getElementById('q').value.trim();
+  const loc = document.getElementById('loc').value.trim();
+  const hl = document.getElementById('hl').value.trim();
+  const gl = document.getElementById('gl').value.trim();
+
+  if (!q){ return null; }
+
+  const params = new URLSearchParams();
+  params.set('q', q);
+  params.set('pws', '0');
+
+  if (loc){
+    params.set('uule', buildUule(loc));
+  }
+  if (hl){ params.set('hl', hl); }
+  if (gl){ params.set('gl', gl); }
+
+  return 'https://www.google.com/search?' + params.toString();
+}
+
+function updatePreview(){
+  const url = buildUrl();
+  const preview = document.getElementById('preview');
+  if (url){
+    preview.textContent = url;
+    preview.classList.add('show');
+  } else {
+    preview.classList.remove('show');
+  }
+}
+
+['q','loc','hl','gl'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updatePreview);
+});
+
+document.getElementById('goBtn').addEventListener('click', () => {
+  const url = buildUrl();
+  if (!url){
+    document.getElementById('q').focus();
+    return;
+  }
+  window.open(url, '_blank', 'noopener');
+});
+
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ document.getElementById('goBtn').click(); }
+});
+document.getElementById('loc').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ document.getElementById('goBtn').click(); }
+});
+</script>
+</body>
+</html>
