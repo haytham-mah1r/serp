@@ -164,6 +164,28 @@
   }
   .footer-links a{color:var(--brass); text-decoration:none;}
   .footer-links a:hover{text-decoration:underline;}
+  .warn{
+    background:#3a2a1a;
+    border:1px solid var(--brass-dark);
+    color:#e8d9c0;
+    font-size:12px;
+    line-height:1.7;
+    padding:16px 18px;
+    margin-bottom:24px;
+    border-radius:2px;
+  }
+  .warn strong{color:#f0c78a;}
+  .warn ol{margin:8px 0 0; padding-left:18px;}
+  .warn li{margin-bottom:4px;}
+  .checkrow{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    margin-top:14px;
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  .checkrow input{margin-top:2px;}
 </style>
 </head>
 <body>
@@ -171,6 +193,15 @@
   <div class="eyebrow">Meridian · Local SERP checker</div>
   <h1>See Google from anywhere,<br/>without leaving your desk.</h1>
   <p class="sub">Builds a Google search URL with the <code>uule</code>, <code>hl</code>, and <code>gl</code> parameters, so results render as if the search came from another city or country. Everything runs in your browser — nothing is sent anywhere but Google.</p>
+
+  <div class="warn">
+    <strong>If results keep showing your real location:</strong> that's almost never the <code>uule</code> value being wrong — it's Google reading your actual GPS/IP because it trusts that signal more.
+    <ol>
+      <li>Block location access for <code>google.com</code> at <code>chrome://settings/content/location</code></li>
+      <li>Test in a fresh incognito window, signed out of any Google account</li>
+      <li>For the first test, avoid literal "near me" — try "in &lt;city&gt;" instead, which respects <code>uule</code> more reliably</li>
+    </ol>
+  </div>
 
   <div class="card">
     <div class="field">
@@ -199,6 +230,11 @@
         </div>
       </div>
     </details>
+
+    <label class="checkrow">
+      <input type="checkbox" id="rewriteNearMe" checked/>
+      <span>Replace "near me" with the target city in the query text (belt-and-suspenders — <code>uule</code> alone is often overridden by device/IP location for that exact phrase)</span>
+    </label>
 
     <button class="go" id="goBtn">Search this location →</button>
     <div class="preview" id="preview"></div>
@@ -235,12 +271,20 @@ function buildUule(canonicalName){
 }
 
 function buildUrl(){
-  const q = document.getElementById('q').value.trim();
+  let q = document.getElementById('q').value.trim();
   const loc = document.getElementById('loc').value.trim();
   const hl = document.getElementById('hl').value.trim();
   const gl = document.getElementById('gl').value.trim();
+  const rewrite = document.getElementById('rewriteNearMe').checked;
 
   if (!q){ return null; }
+
+  if (rewrite && loc){
+    const city = loc.split(',')[0].trim();
+    if (city && /near me/i.test(q)){
+      q = q.replace(/near me/ig, 'in ' + city).trim();
+    }
+  }
 
   const params = new URLSearchParams();
   params.set('q', q);
@@ -269,6 +313,7 @@ function updatePreview(){
 ['q','loc','hl','gl'].forEach(id => {
   document.getElementById(id).addEventListener('input', updatePreview);
 });
+document.getElementById('rewriteNearMe').addEventListener('change', updatePreview);
 
 document.getElementById('goBtn').addEventListener('click', () => {
   const url = buildUrl();
