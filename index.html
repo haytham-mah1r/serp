@@ -186,6 +186,69 @@
     color:var(--ink-soft);
   }
   .checkrow input{margin-top:2px;}
+  .place-wrap{position:relative;}
+  .place-row{
+    display:flex;
+    gap:0;
+  }
+  .place-row input{
+    border-top-right-radius:0;
+    border-bottom-right-radius:0;
+  }
+  .geocode-btn{
+    flex-shrink:0;
+    padding:0 16px;
+    background:#fff;
+    border:1px solid var(--paper-line);
+    border-left:none;
+    color:var(--brass-dark);
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    cursor:pointer;
+    border-top-right-radius:1px;
+    border-bottom-right-radius:1px;
+  }
+  .geocode-btn:hover{background:var(--brass); color:#fff; border-color:var(--brass);}
+  .geocode-btn:disabled{opacity:.5; cursor:default;}
+  .suggestions{
+    position:absolute;
+    top:calc(100% + 2px);
+    left:0;
+    right:0;
+    background:#fff;
+    border:1px solid var(--paper-line);
+    box-shadow:0 12px 24px -8px rgba(0,0,0,0.35);
+    z-index:20;
+    max-height:240px;
+    overflow-y:auto;
+    display:none;
+  }
+  .suggestions.show{display:block;}
+  .suggestion-item{
+    padding:9px 12px;
+    font-size:13px;
+    cursor:pointer;
+    border-bottom:1px solid #efe9d8;
+  }
+  .suggestion-item:last-child{border-bottom:none;}
+  .suggestion-item:hover, .suggestion-item.active{
+    background:var(--brass);
+    color:#fff;
+  }
+  .suggestion-empty{
+    padding:9px 12px;
+    font-size:12px;
+    color:#8a8370;
+  }
+  .resolved{
+    display:none;
+    font-size:11px;
+    color:var(--pine);
+    margin-top:6px;
+  }
+  .resolved.show{display:block;}
 </style>
 </head>
 <body>
@@ -209,10 +272,21 @@
       <input id="q" type="text" placeholder="best coffee shop" autocomplete="off"/>
     </div>
 
+    <div class="field place-wrap">
+      <label for="place">Location — type an address, then geocode</label>
+      <div class="place-row">
+        <input id="place" type="text" placeholder="Red Deer, AB, Canada" autocomplete="off"/>
+        <button type="button" class="geocode-btn" id="geocodeBtn">geocode</button>
+      </div>
+      <div id="suggestions" class="suggestions"></div>
+      <div class="resolved" id="resolved"></div>
+      <div class="hint">Type a place, then click <strong>geocode</strong> (or just keep typing — suggestions appear live too). Powered by OpenStreetMap's free geocoder — no API key needed.</div>
+    </div>
+
     <div class="field">
-      <label for="loc">Location (Google Ads canonical name)</label>
+      <label for="loc">Resolved canonical name (editable)</label>
       <input id="loc" type="text" placeholder="Austin,Texas,United States" autocomplete="off"/>
-      <div class="hint">Format: City,Region,Country — exactly as Google Ads' geo-target list spells it. Region and country can be omitted for a broader match.</div>
+      <div class="hint">Auto-filled after you pick a place above. You can also type/edit this directly if you already know the exact Google Ads geo-target spelling.</div>
     </div>
 
     <hr class="divider"/>
@@ -247,6 +321,122 @@
 </div>
 
 <script>
+// --- geocode typeahead (OpenStreetMap Nominatim, free/no key) ---
+const placeInput = document.getElementById('place');
+const suggestionsBox = document.getElementById('suggestions');
+const resolvedNote = document.getElementById('resolved');
+let geocodeTimer = null;
+let activeIndex = -1;
+let currentResults = [];
+
+function canonicalFromAddress(item){
+  const a = item.address || {};
+  const city = a.city || a.town || a.village || a.municipality || a.county || a.state_district || '';
+  const region = a.state || a.region || '';
+  const country = a.country || '';
+  const parts = [city, region, country].filter(Boolean);
+  return parts.join(',');
+}
+
+function renderSuggestions(results){
+  currentResults = results;
+  activeIndex = -1;
+  if (!results.length){
+    suggestionsBox.innerHTML = '<div class="suggestion-empty">No matches — try a broader or differently spelled place name.</div>';
+    suggestionsBox.classList.add('show');
+    return;
+  }
+  suggestionsBox.innerHTML = results.map((r, i) =>
+    `<div class="suggestion-item" data-idx="${i}">${r.display_name}</div>`
+  ).join('');
+  suggestionsBox.classList.add('show');
+}
+
+async function geocode(query){
+  if (query.trim().length < 3){
+    suggestionsBox.classList.remove('show');
+    return;
+  }
+  try{
+    const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q=' + encodeURIComponent(query);
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    renderSuggestions(data);
+  } catch(err){
+    suggestionsBox.innerHTML = '<div class="suggestion-empty">Lookup failed — you can type the canonical name below manually instead.</div>';
+    suggestionsBox.classList.add('show');
+  }
+}
+
+function selectResult(item){
+  const canonical = canonicalFromAddress(item);
+  document.getElementById('loc').value = canonical || item.display_name.split(',').slice(0,3).join(',').replace(/\s+/g,'');
+  placeInput.value = item.display_name;
+  suggestionsBox.classList.remove('show');
+  resolvedNote.textContent = `Resolved: ${canonical || '(using display name fallback)'} · ${parseFloat(item.lat).toFixed(4)}, ${parseFloat(item.lon).toFixed(4)}`;
+  resolvedNote.classList.add('show');
+  updatePreview();
+}
+
+placeInput.addEventListener('input', () => {
+  clearTimeout(geocodeTimer);
+  const q = placeInput.value;
+  geocodeTimer = setTimeout(() => geocode(q), 400);
+});
+
+const geocodeBtn = document.getElementById('geocodeBtn');
+geocodeBtn.addEventListener('click', async () => {
+  clearTimeout(geocodeTimer);
+  geocodeBtn.disabled = true;
+  geocodeBtn.textContent = '…';
+  await geocode(placeInput.value);
+  geocodeBtn.disabled = false;
+  geocodeBtn.textContent = 'geocode';
+  // if geocode produced exactly one usable result, auto-select it
+  if (currentResults.length === 1){
+    selectResult(currentResults[0]);
+  }
+});
+
+placeInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && activeIndex < 0){
+    e.preventDefault();
+    geocodeBtn.click();
+  }
+});
+
+suggestionsBox.addEventListener('click', (e) => {
+  const item = e.target.closest('.suggestion-item');
+  if (!item || item.dataset.idx === undefined) return;
+  selectResult(currentResults[parseInt(item.dataset.idx, 10)]);
+});
+
+placeInput.addEventListener('keydown', (e) => {
+  const items = suggestionsBox.querySelectorAll('.suggestion-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown'){
+    e.preventDefault();
+    activeIndex = Math.min(activeIndex + 1, items.length - 1);
+  } else if (e.key === 'ArrowUp'){
+    e.preventDefault();
+    activeIndex = Math.max(activeIndex - 1, 0);
+  } else if (e.key === 'Enter' && activeIndex >= 0){
+    e.preventDefault();
+    selectResult(currentResults[activeIndex]);
+    return;
+  } else {
+    return;
+  }
+  items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+  items[activeIndex].scrollIntoView({ block: 'nearest' });
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.place-wrap')){
+    suggestionsBox.classList.remove('show');
+  }
+});
+
 function encodeVarint(n){
   const bytes = [];
   while (true){
@@ -330,6 +520,7 @@ document.getElementById('q').addEventListener('keydown', e => {
 document.getElementById('loc').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ document.getElementById('goBtn').click(); }
 });
+document.getElementById('loc').addEventListener('input', updatePreview);
 </script>
 </body>
 </html>
