@@ -329,11 +329,19 @@ let geocodeTimer = null;
 let activeIndex = -1;
 let currentResults = [];
 
+function cleanPart(s){
+  if (!s) return '';
+  // OSM sometimes disambiguates with trailing qualifiers like
+  // "Red Deer (city)" or "Red Deer County (regional municipality)" —
+  // Google's geo-target list has no such entries, so strip them.
+  return s.replace(/\s*\([^)]*\)\s*/g, '').trim();
+}
+
 function canonicalFromAddress(item){
   const a = item.address || {};
-  const city = a.city || a.town || a.village || a.municipality || a.county || a.state_district || '';
-  const region = a.state || a.region || '';
-  const country = a.country || '';
+  const city = cleanPart(a.city || a.town || a.village || a.municipality || a.county || a.state_district || '');
+  const region = cleanPart(a.state || a.region || '');
+  const country = cleanPart(a.country || '');
   const parts = [city, region, country].filter(Boolean);
   return parts.join(',');
 }
@@ -370,7 +378,8 @@ async function geocode(query){
 
 function selectResult(item){
   const canonical = canonicalFromAddress(item);
-  document.getElementById('loc').value = canonical || item.display_name.split(',').slice(0,3).join(',').replace(/\s+/g,'');
+  const fallback = item.display_name.split(',').slice(0,3).map(s => cleanPart(s)).filter(Boolean).join(',');
+  document.getElementById('loc').value = canonical || fallback;
   placeInput.value = item.display_name;
   suggestionsBox.classList.remove('show');
   resolvedNote.textContent = `Resolved: ${canonical || '(using display name fallback)'} · ${parseFloat(item.lat).toFixed(4)}, ${parseFloat(item.lon).toFixed(4)}`;
