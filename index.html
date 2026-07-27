@@ -4,10 +4,11 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="referrer" content="no-referrer"/>
-<!-- Marker the Meridian Incognito Launcher extension looks for.
+<!-- Marker the Meridian Incognito Launcher / Grid Scanner extension looks for.
      Without this tag the extension ignores the page entirely. -->
 <meta name="meridian-serp-checker" content="1"/>
-<title>Meridian — Local SERP Checker</title>
+<title>Meridian — Local SERP Checker &amp; Grid Rank Tracker</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <style>
   :root{
     --ink:#12181f;
@@ -17,6 +18,11 @@
     --brass:#a8763a;
     --brass-dark:#7a5426;
     --pine:#2f4a3d;
+    --rank-good:#2e6b3e;
+    --rank-mid:#b57e1f;
+    --rank-bad:#9c3b2e;
+    --rank-lost:#5c2620;
+    --rank-none:#8d8672;
     --mono: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
     --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
   }
@@ -34,7 +40,7 @@
     justify-content:center;
     padding:48px 20px;
   }
-  .sheet{width:100%; max-width:720px;}
+  .sheet{width:100%; max-width:1140px;}
   .eyebrow{
     font-size:11px; letter-spacing:.18em; text-transform:uppercase;
     color:var(--brass); margin-bottom:10px;
@@ -45,10 +51,22 @@
   }
   .sub{
     color:#9aa4ad; font-size:14px; line-height:1.6;
-    max-width:52ch; margin-bottom:34px;
+    max-width:60ch; margin-bottom:26px;
   }
+  /* ---- Tabs ---- */
+  .tabs{display:flex; gap:2px; margin-bottom:0;}
+  .tab{
+    padding:11px 20px; font-family:var(--mono); font-size:12px;
+    letter-spacing:.1em; text-transform:uppercase; cursor:pointer;
+    background:transparent; color:#8a9199; border:1px solid rgba(216,208,186,.25);
+    border-bottom:none; border-radius:2px 2px 0 0;
+  }
+  .tab.active{background:var(--paper); color:var(--ink); border-color:var(--paper);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
   .card{
-    background:var(--paper); color:var(--ink); border-radius:2px;
+    background:var(--paper); color:var(--ink); border-radius:0 2px 2px 2px;
     padding:28px; box-shadow:0 30px 60px -20px rgba(0,0,0,0.6); position:relative;
   }
   .card::before{
@@ -78,6 +96,7 @@
     box-shadow:0 0 0 3px rgba(168,118,58,0.15);
   }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
   .row-geo{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end;}
   .hint{font-size:11px; color:#8a8370; margin-top:5px; line-height:1.5;}
   .divider{border:none; border-top:1px dashed var(--paper-line); margin:22px 0;}
@@ -92,7 +111,7 @@
     cursor:pointer; transition:all .15s ease; white-space:nowrap;
   }
   .btn-secondary:hover{background:var(--pine); color:var(--paper);}
-  .btn-secondary:disabled{opacity:.5; cursor:wait;}
+  .btn-secondary:disabled{opacity:.5; cursor:not-allowed;}
   .go{
     width:100%; margin-top:8px; padding:13px 16px; background:var(--brass-dark);
     color:#fff; border:none; border-radius:1px; font-family:var(--mono);
@@ -100,69 +119,125 @@
     cursor:pointer; transition:background .15s ease;
   }
   .go:hover{background:var(--brass);}
+  .go:disabled{opacity:.5; cursor:not-allowed;}
   .geocode-status{font-size:11px; margin-top:6px; line-height:1.5; min-height:14px;}
   .geocode-status.ok{color:var(--pine);}
   .geocode-status.err{color:#9c3b2e;}
-  /* Incognito bridge status pill */
   .ext-status{
     display:flex; align-items:center; gap:8px;
     font-size:11px; margin-top:10px; line-height:1.5; color:#8a8370;
   }
-  .ext-status .dot{
-    width:8px; height:8px; border-radius:50%;
-    background:#b0a88f; flex:none;
-  }
+  .ext-status .dot{width:8px; height:8px; border-radius:50%; background:#b0a88f; flex:none;}
   .ext-status.on{color:var(--pine);}
   .ext-status.on .dot{background:var(--pine);}
   .ext-status.warn{color:#9c3b2e;}
   .ext-status.warn .dot{background:#9c3b2e;}
-  .preview-wrap{
-    margin-top:16px; max-height:0; overflow:hidden; opacity:0;
-    transition:max-height .2s ease, opacity .2s ease;
-  }
+  .preview-wrap{margin-top:16px; max-height:0; overflow:hidden; opacity:0; transition:max-height .2s ease, opacity .2s ease;}
   .preview-wrap.show{max-height:320px; opacity:1;}
   .preview{
     font-size:11px; color:var(--ink-soft); word-break:break-all;
-    background:#eae4d3; border:1px solid var(--paper-line);
-    padding:10px 12px; line-height:1.6;
+    background:#eae4d3; border:1px solid var(--paper-line); padding:10px 12px; line-height:1.6;
   }
   .preview a{color:var(--brass-dark); text-decoration:underline;}
   .preview-actions{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
-  .preview-actions button{
+  .preview-actions button, .chip-btn{
     padding:7px 12px; font-family:var(--mono); font-size:11px;
     letter-spacing:.06em; text-transform:uppercase; cursor:pointer;
-    background:#fff; border:1px solid var(--paper-line); color:var(--ink-soft);
-    border-radius:1px;
+    background:#fff; border:1px solid var(--paper-line); color:var(--ink-soft); border-radius:1px;
   }
-  .preview-actions button:hover{border-color:var(--brass); color:var(--brass-dark);}
-  .preview-actions button:disabled{
-    opacity:.45; cursor:not-allowed;
-  }
-  .preview-actions button:disabled:hover{
-    border-color:var(--paper-line); color:var(--ink-soft);
-  }
+  .preview-actions button:hover, .chip-btn:hover{border-color:var(--brass); color:var(--brass-dark);}
+  .preview-actions button:disabled{opacity:.45; cursor:not-allowed;}
+  .preview-actions button:disabled:hover{border-color:var(--paper-line); color:var(--ink-soft);}
   .incog-hint{font-size:11px; color:#8a8370; margin-top:8px; line-height:1.6;}
-  .note{
-    font-size:12px; color:#7c8590; line-height:1.7;
-    margin-top:28px; max-width:60ch;
-  }
+  .note{font-size:12px; color:#7c8590; line-height:1.7; margin-top:28px; max-width:72ch;}
   .note strong{color:#b9c1c9;}
   .note code{color:#b9c1c9;}
   .footer-links{margin-top:10px; font-size:12px; line-height:1.8;}
   .footer-links a{color:var(--brass); text-decoration:none;}
   .footer-links a:hover{text-decoration:underline;}
+
+  /* ---- Grid tracker layout ---- */
+  .tracker{display:grid; grid-template-columns:340px 1fr; gap:24px; align-items:start;}
+  .tracker .col-map{min-width:0;}
+  #map{
+    height:560px; width:100%; border:1px solid var(--paper-line);
+    background:#e7e2d2; border-radius:1px;
+  }
+  .legend{display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:11px; color:var(--ink-soft);}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .legend i{width:12px; height:12px; border-radius:50%; display:inline-block;}
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .chip{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:6px 10px; font-size:12px; background:#fff;
+    border:1px solid var(--paper-line); border-radius:1px; cursor:pointer;
+  }
+  .chip.active{border-color:var(--brass-dark); background:#f6ead6; color:var(--brass-dark);}
+  .chip .x{color:#9c3b2e; cursor:pointer; font-size:11px;}
+  .scan-status{font-size:11px; margin-top:8px; line-height:1.6; min-height:16px; color:var(--ink-soft);}
+  .scan-status.err{color:#9c3b2e;}
+  .scan-status.ok{color:var(--pine);}
+  .progress{
+    height:6px; background:#e7e2d2; border:1px solid var(--paper-line);
+    margin-top:8px; border-radius:1px; overflow:hidden;
+  }
+  .progress i{display:block; height:100%; width:0; background:var(--brass); transition:width .3s ease;}
+  .summary-strip{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;
+  }
+  .summary-strip .stat{
+    background:#eae4d3; border:1px solid var(--paper-line); padding:10px 12px; text-align:center;
+  }
+  .summary-strip .stat b{display:block; font-family:var(--serif); font-size:1.4rem; font-weight:500;}
+  .summary-strip .stat span{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);}
+
+  /* Leaflet rank dots */
+  .rank-dot{
+    display:flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border-radius:50%;
+    color:#fff; font-family:var(--mono); font-size:12px; font-weight:700;
+    border:2px solid rgba(255,255,255,.85); box-shadow:0 2px 6px rgba(0,0,0,.35);
+    cursor:pointer;
+  }
+  .rank-dot.good{background:var(--rank-good);}
+  .rank-dot.mid{background:var(--rank-mid);}
+  .rank-dot.bad{background:var(--rank-bad);}
+  .rank-dot.lost{background:var(--rank-lost);}
+  .rank-dot.none{background:var(--rank-none);}
+  .rank-dot.scanning{background:var(--pine); animation:pulse 1s infinite alternate;}
+  @keyframes pulse{from{transform:scale(1);}to{transform:scale(1.15);}}
+  .leaflet-popup-content{font-family:var(--mono); font-size:12px; line-height:1.7;}
+  .leaflet-popup-content a{color:var(--brass-dark);}
+  .leaflet-popup-content input.mini{
+    width:56px; font-family:var(--mono); font-size:12px; padding:4px 6px;
+    border:1px solid var(--paper-line);
+  }
+  .pop-title{font-family:var(--serif); font-size:14px; margin-bottom:2px;}
+
+  @media (max-width:900px){
+    .tracker{grid-template-columns:1fr;}
+    #map{height:420px;}
+  }
   @media (max-width:520px){
-    .row2{grid-template-columns:1fr;}
+    .row2,.row3{grid-template-columns:1fr;}
     .row-geo{grid-template-columns:1fr;}
+    .summary-strip{grid-template-columns:repeat(2,1fr);}
   }
 </style>
 </head>
 <body>
 <div class="sheet">
-  <div class="eyebrow">Meridian · Local SERP checker</div>
+  <div class="eyebrow">Meridian · Local SERP checker &amp; grid rank tracker</div>
   <h1>See Google from anywhere,<br/>without leaving your desk.</h1>
-  <p class="sub">Builds a Google search URL with the <code>uule</code>, <code>hl</code>, and <code>gl</code> parameters, so results render as if the search came from an exact point on the map. Everything runs in your browser.</p>
+  <p class="sub">One-off checks build a pinned Google URL with <code>uule</code>/<code>hl</code>/<code>gl</code>. The Grid Tracker scatters those pinned searches across a map around a Google Business Profile and records where it ranks at every point — scanned automatically through the companion extension, or verified by hand from each dot's exact URL.</p>
 
+  <div class="tabs">
+    <button class="tab active" data-tab="checker">SERP Checker</button>
+    <button class="tab" data-tab="tracker">Grid Rank Tracker</button>
+  </div>
+
+  <!-- ============================ TAB 1: SERP CHECKER (original) ============================ -->
+  <div class="panel active" id="panel-checker">
   <div class="card">
     <div class="field">
       <label for="q">Search query</label>
@@ -252,23 +327,161 @@
       </div>
     </div>
   </div>
+  </div>
+
+  <!-- ============================ TAB 2: GRID RANK TRACKER ============================ -->
+  <div class="panel" id="panel-tracker">
+  <div class="card">
+    <div class="tracker">
+      <div class="col-controls">
+
+        <div class="field">
+          <label for="clientSelect">Client</label>
+          <select id="clientSelect"></select>
+          <div class="row-geo" style="margin-top:8px;">
+            <input id="newClientName" type="text" placeholder="New client name" autocomplete="off"/>
+            <button class="btn-secondary" id="addClientBtn" type="button">Add</button>
+          </div>
+          <div class="preview-actions" style="margin-top:8px;">
+            <button id="deleteClientBtn" type="button">Delete client</button>
+            <button id="exportBtn" type="button">Export data</button>
+            <button id="importBtn" type="button">Import</button>
+            <input id="importFile" type="file" accept="application/json" style="display:none;"/>
+          </div>
+        </div>
+
+        <hr class="divider"/>
+
+        <div class="field">
+          <label for="gbpLink">GBP share link</label>
+          <input id="gbpLink" type="text" placeholder="https://maps.app.goo.gl/…  or full maps.google.com URL" autocomplete="off"/>
+          <div class="hint">Paste the profile's “Share” link. Full <code>google.com/maps/place/…</code> URLs auto-fill the name below; short <code>maps.app.goo.gl</code> links can't be expanded by a web page, so type the name yourself.</div>
+        </div>
+        <div class="field">
+          <label for="bizName">Business name — exactly as shown on Google</label>
+          <input id="bizName" type="text" placeholder="Meridian Coffee Roasters" autocomplete="off"/>
+          <div class="hint">Ranks are found by matching this name in the results, so spelling must match the listing.</div>
+        </div>
+
+        <div class="field">
+          <div class="row-geo">
+            <div>
+              <label for="tLoc">Grid centre</label>
+              <input id="tLoc" type="text" placeholder="Business address" autocomplete="off"/>
+            </div>
+            <button class="btn-secondary" id="tGeocodeBtn" type="button">Geocode</button>
+          </div>
+          <div class="geocode-status" id="tGeoStatus"></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="tLat">Latitude</label>
+            <input id="tLat" type="text" inputmode="decimal" autocomplete="off"/>
+          </div>
+          <div class="field">
+            <label for="tLng">Longitude</label>
+            <input id="tLng" type="text" inputmode="decimal" autocomplete="off"/>
+          </div>
+        </div>
+
+        <div class="row3">
+          <div class="field">
+            <label for="gridSize">Grid</label>
+            <select id="gridSize">
+              <option value="3">3 × 3</option>
+              <option value="5">5 × 5</option>
+              <option value="7" selected>7 × 7</option>
+              <option value="9">9 × 9</option>
+              <option value="11">11 × 11</option>
+              <option value="13">13 × 13</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="spacing">Spacing (km)</label>
+            <input id="spacing" type="text" inputmode="decimal" value="1.5" autocomplete="off"/>
+          </div>
+          <div class="field">
+            <label for="surface">Surface</label>
+            <select id="surface">
+              <option value="local" selected>Local finder</option>
+              <option value="web">Web SERP</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="tRegion">Region &amp; language</label>
+          <select id="tRegion"></select>
+        </div>
+
+        <div class="field">
+          <label for="kwInput">Keywords</label>
+          <div class="row-geo">
+            <input id="kwInput" type="text" placeholder="plumber red deer" autocomplete="off"/>
+            <button class="btn-secondary" id="addKwBtn" type="button">Save</button>
+          </div>
+          <div class="chips" id="kwChips"></div>
+          <div class="hint">Saved per client. Click a keyword to make it the active one; scans and history attach to it.</div>
+        </div>
+
+        <div class="field">
+          <label for="scanDelay">Seconds between points</label>
+          <input id="scanDelay" type="text" inputmode="numeric" value="12" autocomplete="off"/>
+          <div class="hint">Slower is safer — rapid-fire queries get CAPTCHA-walled by Google and the scan will pause itself.</div>
+        </div>
+
+        <button class="go" id="scanBtn">Scan grid for active keyword →</button>
+        <button class="btn-secondary" id="stopBtn" type="button" style="width:100%; margin-top:8px;" disabled>Stop scan</button>
+        <div class="progress"><i id="progressBar"></i></div>
+        <div class="scan-status" id="scanStatus"></div>
+        <div class="ext-status" id="tExtStatus">
+          <span class="dot"></span>
+          <span id="tExtStatusText">Scanner bridge: checking for extension…</span>
+        </div>
+
+        <div class="field" style="margin-top:18px;">
+          <label for="historySelect">Scan history (active keyword)</label>
+          <select id="historySelect"></select>
+        </div>
+      </div>
+
+      <div class="col-map">
+        <div id="map"></div>
+        <div class="legend">
+          <span><i style="background:var(--rank-good)"></i> 1–3</span>
+          <span><i style="background:var(--rank-mid)"></i> 4–10</span>
+          <span><i style="background:var(--rank-bad)"></i> 11–20</span>
+          <span><i style="background:var(--rank-lost)"></i> 21+ / not found</span>
+          <span><i style="background:var(--rank-none)"></i> not scanned — click the dot for its link</span>
+        </div>
+        <div class="summary-strip" id="summaryStrip">
+          <div class="stat"><b id="statAvg">—</b><span>avg rank</span></div>
+          <div class="stat"><b id="statTop3">—</b><span>in top 3</span></div>
+          <div class="stat"><b id="statVis">—</b><span>found</span></div>
+          <div class="stat"><b id="statPts">—</b><span>points</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
 
   <p class="note">
     <strong>How it works:</strong> with coordinates set, the tool encodes an
     <code>a+</code>-type <code>uule</code> — a standard-base64 blob of a small location record
     (role, producer, provenance, a timestamp, the lat/lng in E7 fixed-point, and a radius) —
     which pins the search to an exact point, the same way ad-preview tooling does.
-    Without coordinates it falls back to the older <code>w+</code> canonical-name encoding.
-    To verify what Google thinks, search for <em>where am i</em> and check the map onebox,
-    or scroll to the bottom of the results page where Google states the location it used.
+    The grid tracker repeats that encoding for every dot on the map, so each dot's popup
+    links to the literal URL that was (or would be) scanned — open it and you're looking at
+    exactly what the interface saw.
   </p>
   <p class="note">
-    <strong>Incognito bridge:</strong> browsers deliberately forbid web pages from opening
-    incognito/private windows, so this page pairs with a tiny local extension. Once installed
-    (and granted “Allow in Incognito” in Chrome/Edge, or “Run in Private Windows” in Firefox),
-    the <em>Search this location</em> button routes every search straight into a fresh
-    incognito window automatically. Without the extension, searches open in a normal tab
-    as before.
+    <strong>Automation reality check:</strong> a web page cannot read Google's results itself —
+    browsers block cross-site reads and Google blocks bots. Scanning therefore runs through the
+    companion <em>Meridian Grid Scanner</em> extension: this page posts each point's URL to it,
+    the extension loads the page in a background incognito tab, finds your business name in the
+    local results, and posts the rank back. Without the extension, dots stay grey and you record
+    ranks manually from each dot's link. Scans are throttled on purpose; automated querying is
+    against Google's terms, so keep grids small, delays long, and expect the occasional CAPTCHA pause.
   </p>
   <div class="footer-links">
     <a href="https://developers.google.com/web/tools/chrome-devtools/device-mode/device-input-and-sensors" target="_blank" rel="noopener">Chrome DevTools “Sensors” location override</a> ·
@@ -276,8 +489,11 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-/* ---------- Region & language presets (gl / hl pairs) ---------- */
+/* =========================================================================
+   SHARED: regions, uule encoding, extension bridge, geocoding
+   ========================================================================= */
 const REGIONS = [
   {label:"Canada — English",        gl:"CA", hl:"en"},
   {label:"Canada — Français",       gl:"CA", hl:"fr"},
@@ -320,36 +536,89 @@ const REGIONS = [
   {label:"Ukraine — Українська",    gl:"UA", hl:"uk"},
 ];
 
+function fillRegionSelect(sel){
+  REGIONS.forEach((r, i) => {
+    const opt = document.createElement('option');
+    opt.value = i; opt.textContent = r.label;
+    sel.appendChild(opt);
+  });
+  sel.value = 0;
+}
 const regionSelect = document.getElementById('region');
-REGIONS.forEach((r, i) => {
-  const opt = document.createElement('option');
-  opt.value = i;
-  opt.textContent = r.label;
-  regionSelect.appendChild(opt);
-});
-regionSelect.value = 0; // default: Canada — English
+const tRegionSelect = document.getElementById('tRegion');
+fillRegionSelect(regionSelect);
+fillRegionSelect(tRegionSelect);
 
-/* ---------- Incognito bridge (companion extension) ----------
-   A web page cannot open an incognito window itself — browsers block that
-   by design. The "Meridian Incognito Launcher" extension listens on this
-   page (identified by the meridian-serp-checker meta tag), and its
-   background worker opens windows with { incognito: true }.
+/* ---------- UULE encoding (standard base64: keep + / = intact) ---------- */
+function bytesToBase64(bytes){
+  let binary = '';
+  bytes.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+function encodeVarint(n){
+  const bytes = [];
+  while (true){
+    let b = n & 0x7f;
+    n >>>= 7;
+    if (n !== 0){ bytes.push(b | 0x80); } else { bytes.push(b); break; }
+  }
+  return bytes;
+}
+function buildUuleCanonical(canonicalName){
+  const nameBytes = Array.from(new TextEncoder().encode(canonicalName));
+  const bytes = [];
+  bytes.push(0x08, 2);
+  bytes.push(0x10, 32);
+  bytes.push(0x22);
+  bytes.push(...encodeVarint(nameBytes.length));
+  bytes.push(...nameBytes);
+  return 'w+' + bytesToBase64(bytes);
+}
+function buildUuleLatLng(lat, lng, radius){
+  const latE7 = Math.round(lat * 1e7);
+  const lngE7 = Math.round(lng * 1e7);
+  const tsMicro = Date.now() * 1000;
+  const record =
+    'role:1\n' + 'producer:12\n' + 'provenance:6\n' +
+    'timestamp:' + tsMicro + '\n' +
+    'latlng{\n' + 'latitude_e7:' + latE7 + '\n' + 'longitude_e7:' + lngE7 + '\n' + '}\n' +
+    'radius:' + radius;
+  return 'a+' + btoa(record);
+}
+function uuleForUrl(uule){
+  const prefix = uule.slice(0, 2);
+  const body = uule.slice(2)
+    .replace(/\+/g, '%2B').replace(/\//g, '%2F').replace(/=/g, '%3D');
+  return prefix + body;
+}
 
+/* ---------- Extension bridge (launcher + grid scanner) ----------
    Protocol (window.postMessage):
-     page  -> ext : { type:'MERIDIAN_PING' }
-     ext   -> page: { type:'MERIDIAN_EXT_READY', version }
-     page  -> ext : { type:'MERIDIAN_OPEN_INCOGNITO', url }
-     ext   -> page: { type:'MERIDIAN_OPEN_RESULT', ok, error }              */
-
+     page -> ext : { type:'MERIDIAN_PING' }
+     ext  -> page: { type:'MERIDIAN_EXT_READY', version }
+     page -> ext : { type:'MERIDIAN_OPEN_INCOGNITO', url }
+     ext  -> page: { type:'MERIDIAN_OPEN_RESULT', ok, error }
+     page -> ext : { type:'MERIDIAN_SCAN', id, url, bizName }
+     ext  -> page: { type:'MERIDIAN_SCAN_RESULT', id, ok, localRank,
+                     organicRank, top, captcha, finalUrl, error }          */
 let extReady = false;
+let extVersion = null;
+const scanCallbacks = new Map();
+
 const extStatus = document.getElementById('extStatus');
 const extStatusText = document.getElementById('extStatusText');
+const tExtStatus = document.getElementById('tExtStatus');
+const tExtStatusText = document.getElementById('tExtStatusText');
 const openIncogBtn = document.getElementById('openIncogBtn');
 const incogHint = document.getElementById('incogHint');
 
 function setExtState(state, text){
   extStatus.className = 'ext-status' + (state ? ' ' + state : '');
   extStatusText.textContent = text;
+}
+function setTrackerExtState(state, text){
+  tExtStatus.className = 'ext-status' + (state ? ' ' + state : '');
+  tExtStatusText.textContent = text;
 }
 
 window.addEventListener('message', (event) => {
@@ -359,16 +628,19 @@ window.addEventListener('message', (event) => {
 
   if (msg.type === 'MERIDIAN_EXT_READY'){
     extReady = true;
+    extVersion = msg.version || null;
     openIncogBtn.disabled = false;
     setExtState('on', 'Incognito bridge: connected — searches will open in an incognito window.');
     incogHint.textContent = 'The incognito launcher extension is active. ' +
       '“Search this location” and “Open in incognito” both launch a fresh incognito window; ' +
       '“Open in new tab” still uses a normal tab if you ever need one.';
+    const scans = (extVersion && parseFloat(extVersion) >= 2);
+    setTrackerExtState(scans ? 'on' : 'warn', scans
+      ? 'Scanner bridge: connected (v' + extVersion + ') — grid scans run automatically in incognito.'
+      : 'Extension found, but it predates grid scanning — update to v2 to auto-scan. Manual mode meanwhile.');
   }
 
   if (msg.type === 'MERIDIAN_OPEN_RESULT' && !msg.ok){
-    // Most common cause: the extension is installed but hasn't been granted
-    // incognito access yet. Fall back to a normal tab so the search isn't lost.
     setExtState('warn',
       'Incognito bridge error: ' + (msg.error || 'unknown') +
       ' — grant the extension “Allow in Incognito” (Chrome/Edge) or ' +
@@ -376,19 +648,21 @@ window.addEventListener('message', (event) => {
     const url = buildUrl();
     if (url) window.open(url, '_blank', 'noopener');
   }
+
+  if (msg.type === 'MERIDIAN_SCAN_RESULT'){
+    const cb = scanCallbacks.get(msg.id);
+    if (cb){ scanCallbacks.delete(msg.id); cb(msg); }
+  }
 });
 
-// Ask the extension to announce itself (covers load-order races), then
-// settle the status text if nothing answers.
-function pingExtension(){
-  window.postMessage({ type: 'MERIDIAN_PING' }, '*');
-}
+function pingExtension(){ window.postMessage({ type: 'MERIDIAN_PING' }, '*'); }
 pingExtension();
 window.addEventListener('load', pingExtension);
 setTimeout(() => {
   if (!extReady){
     setExtState('', 'Incognito bridge: extension not detected — searches open in a normal tab. ' +
       'Install the companion extension to auto-launch incognito.');
+    setTrackerExtState('', 'Scanner bridge: extension not detected — dots stay grey; open each dot\u2019s link and enter ranks by hand, or install the extension to scan automatically.');
   }
 }, 1500);
 
@@ -400,72 +674,47 @@ function openSearch(url){
   }
 }
 
-/* ---------- UULE encoding ----------
-   IMPORTANT: Google expects STANDARD base64 here (with +, /, = intact),
-   not the URL-safe alphabet. The '=' padding gets percent-encoded to %3D
-   in the final URL; the 'a+'/'w+' prefix keeps a literal '+'.            */
-
-function bytesToBase64(bytes){
-  let binary = '';
-  bytes.forEach(b => binary += String.fromCharCode(b));
-  return btoa(binary);
-}
-
-function encodeVarint(n){
-  const bytes = [];
-  while (true){
-    let b = n & 0x7f;
-    n >>>= 7;
-    if (n !== 0){ bytes.push(b | 0x80); } else { bytes.push(b); break; }
-  }
-  return bytes;
-}
-
-// Legacy: canonical-name based uule ("w+" prefix)
-function buildUuleCanonical(canonicalName){
-  const nameBytes = Array.from(new TextEncoder().encode(canonicalName));
-  const bytes = [];
-  bytes.push(0x08, 2);           // field 1 (varint) = 2
-  bytes.push(0x10, 32);          // field 2 (varint) = 32
-  bytes.push(0x22);              // field 4 (length-delimited)
-  bytes.push(...encodeVarint(nameBytes.length));
-  bytes.push(...nameBytes);
-  return 'w+' + bytesToBase64(bytes);
-}
-
-// Precise: lat/lng based uule ("a+" prefix) — text-format location record.
-// Record layout (verified against a known-working URL):
-//   role:1 / producer:12 / provenance:6 / timestamp:<microseconds> /
-//   latlng{ latitude_e7 / longitude_e7 } / radius:<positive int>
-function buildUuleLatLng(lat, lng, radius){
-  const latE7 = Math.round(lat * 1e7);
-  const lngE7 = Math.round(lng * 1e7);
-  const tsMicro = Date.now() * 1000;
-  const record =
-    'role:1\n' +
-    'producer:12\n' +
-    'provenance:6\n' +
-    'timestamp:' + tsMicro + '\n' +
-    'latlng{\n' +
-    'latitude_e7:' + latE7 + '\n' +
-    'longitude_e7:' + lngE7 + '\n' +
-    '}\n' +
-    'radius:' + radius;
-  return 'a+' + btoa(record);   // standard base64 — do NOT swap + / for - _
-}
-
-// Percent-encode a uule value for the URL while keeping the prefix '+' literal,
-// exactly like known-working tools emit it: a+cm9s...%3D
-function uuleForUrl(uule){
-  const prefix = uule.slice(0, 2);   // 'a+' or 'w+'
-  const body = uule.slice(2)
-    .replace(/\+/g, '%2B')
-    .replace(/\//g, '%2F')
-    .replace(/=/g, '%3D');
-  return prefix + body;
+function requestScan(url, bizName){
+  return new Promise((resolve) => {
+    const id = 'scan-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    scanCallbacks.set(id, resolve);
+    window.postMessage({ type:'MERIDIAN_SCAN', id, url, bizName }, '*');
+    // Safety net: if the extension never answers, resolve as failed.
+    setTimeout(() => {
+      if (scanCallbacks.has(id)){
+        scanCallbacks.delete(id);
+        resolve({ ok:false, error:'no response from extension (timed out)' });
+      }
+    }, 60000);
+  });
 }
 
 /* ---------- Geocoding via OpenStreetMap Nominatim ---------- */
+async function nominatim(query){
+  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q='
+            + encodeURIComponent(query);
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return data.length ? data[0] : null;
+}
+
+/* =========================================================================
+   TAB HANDLING
+   ========================================================================= */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'tracker'){ setTimeout(() => map.invalidateSize(), 60); }
+  });
+});
+
+/* =========================================================================
+   TAB 1: SERP CHECKER (original behaviour, unchanged)
+   ========================================================================= */
 const geocodeBtn = document.getElementById('geocodeBtn');
 const geoStatus = document.getElementById('geoStatus');
 
@@ -479,16 +728,11 @@ async function geocode(){
   geocodeBtn.disabled = true;
   setGeoStatus('Looking up “' + query + '”…', '');
   try{
-    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q='
-              + encodeURIComponent(query);
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    if (!data.length){
+    const hit = await nominatim(query);
+    if (!hit){
       setGeoStatus('No match found. Try adding a region or country to the query.', 'err');
       return;
     }
-    const hit = data[0];
     document.getElementById('lat').value = parseFloat(hit.lat).toFixed(7);
     document.getElementById('lng').value = parseFloat(hit.lon).toFixed(7);
     setGeoStatus('✓ ' + hit.display_name, 'ok');
@@ -499,28 +743,21 @@ async function geocode(){
     geocodeBtn.disabled = false;
   }
 }
-
 function setGeoStatus(msg, kind){
   geoStatus.textContent = msg;
   geoStatus.className = 'geocode-status' + (kind ? ' ' + kind : '');
 }
-
 geocodeBtn.addEventListener('click', geocode);
 document.getElementById('loc').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); geocode(); }
 });
 
-/* ---------- URL builder ----------
-   Assembled by hand (not URLSearchParams) so the uule keeps its literal
-   'a+' prefix, matching the format Google demonstrably accepts.          */
 function buildUrl(){
   const q = document.getElementById('q').value.trim();
   if (!q) return null;
-
   const region = REGIONS[regionSelect.value] || REGIONS[0];
   const hl = document.getElementById('hl').value.trim() || region.hl;
   const gl = document.getElementById('gl').value.trim() || region.gl;
-
   const lat = parseFloat(document.getElementById('lat').value);
   const lng = parseFloat(document.getElementById('lng').value);
   const canonical = document.getElementById('canonical').value.trim();
@@ -532,21 +769,16 @@ function buildUrl(){
   parts.push('q=' + encodeURIComponent(q));
   if (hl) parts.push('hl=' + encodeURIComponent(hl));
   if (gl) parts.push('gl=' + encodeURIComponent(gl));
-  parts.push('ie=utf-8');
-  parts.push('oe=utf-8');
-  parts.push('pws=0');   // disable personalized results
-
+  parts.push('ie=utf-8'); parts.push('oe=utf-8'); parts.push('pws=0');
   if (!isNaN(lat) && !isNaN(lng)){
     parts.push('uule=' + uuleForUrl(buildUuleLatLng(lat, lng, radius)));
   } else if (canonical){
     parts.push('uule=' + uuleForUrl(buildUuleCanonical(canonical)));
   }
   if (num && /^\d+$/.test(num)) parts.push('num=' + num);
-
   return 'https://www.google.com/search?' + parts.join('&');
 }
 
-/* ---------- Preview, copy, open ---------- */
 const previewWrap = document.getElementById('previewWrap');
 const preview = document.getElementById('preview');
 const copyBtn = document.getElementById('copyBtn');
@@ -556,17 +788,14 @@ function updatePreview(){
   if (url){
     preview.innerHTML = '';
     const a = document.createElement('a');
-    a.href = url;
-    a.textContent = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
+    a.href = url; a.textContent = url;
+    a.target = '_blank'; a.rel = 'noopener noreferrer';
     preview.appendChild(a);
     previewWrap.classList.add('show');
   } else {
     previewWrap.classList.remove('show');
   }
 }
-
 ['q','lat','lng','hl','gl','canonical','num','radius'].forEach(id => {
   document.getElementById(id).addEventListener('input', updatePreview);
 });
@@ -589,35 +818,552 @@ copyBtn.addEventListener('click', async () => {
   }
   setTimeout(() => copyBtn.textContent = 'Copy URL', 1600);
 });
-
-// "Open in new tab" always uses a normal tab, even with the bridge active,
-// so you keep a way to see the logged-in view when you want it.
 document.getElementById('openBtn').addEventListener('click', () => {
   const url = buildUrl();
   if (url) window.open(url, '_blank', 'noopener');
 });
-
-// "Open in incognito" requires the bridge; the button stays disabled otherwise.
 openIncogBtn.addEventListener('click', () => {
   const url = buildUrl();
   if (!url || !extReady) return;
   window.postMessage({ type: 'MERIDIAN_OPEN_INCOGNITO', url }, '*');
 });
-
-// Main action: incognito when the bridge is present, normal tab otherwise.
 document.getElementById('goBtn').addEventListener('click', () => {
   const url = buildUrl();
-  if (!url){
-    document.getElementById('q').focus();
-    return;
-  }
+  if (!url){ document.getElementById('q').focus(); return; }
   updatePreview();
   openSearch(url);
 });
-
 document.getElementById('q').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ document.getElementById('goBtn').click(); }
 });
+
+/* =========================================================================
+   TAB 2: GRID RANK TRACKER
+   ========================================================================= */
+
+/* ---------- Persistence (localStorage with in-memory fallback) ---------- */
+const STORE_KEY = 'meridian-grid-tracker-v1';
+let memoryStore = null;
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e){ /* private mode / preview sandbox: fall through */ }
+  return memoryStore || { clients: [], activeClientId: null };
+}
+function saveState(){
+  memoryStore = state;
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){ /* keep in memory */ }
+}
+let state = loadState();
+
+function uid(){ return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7); }
+function activeClient(){ return state.clients.find(c => c.id === state.activeClientId) || null; }
+function activeKeyword(){
+  const c = activeClient();
+  if (!c) return null;
+  return c.keywords.find(k => k.id === c.activeKeywordId) || null;
+}
+
+/* ---------- GBP share link parsing ---------- */
+const gbpLinkInput = document.getElementById('gbpLink');
+const bizNameInput = document.getElementById('bizName');
+gbpLinkInput.addEventListener('input', () => {
+  const v = gbpLinkInput.value.trim();
+  const m = v.match(/\/maps\/place\/([^\/@?]+)/);
+  if (m && !bizNameInput.value.trim()){
+    try{
+      bizNameInput.value = decodeURIComponent(m[1]).replace(/\+/g, ' ');
+    } catch(e){}
+  }
+  const coord = v.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (coord && !document.getElementById('tLat').value){
+    document.getElementById('tLat').value = coord[1];
+    document.getElementById('tLng').value = coord[2];
+  }
+  persistClientFields();
+});
+bizNameInput.addEventListener('input', persistClientFields);
+
+/* ---------- Client management ---------- */
+const clientSelect = document.getElementById('clientSelect');
+function renderClients(){
+  clientSelect.innerHTML = '';
+  if (!state.clients.length){
+    const opt = document.createElement('option');
+    opt.textContent = '— no clients yet, add one below —';
+    opt.value = '';
+    clientSelect.appendChild(opt);
+  }
+  state.clients.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id; opt.textContent = c.name;
+    clientSelect.appendChild(opt);
+  });
+  if (state.activeClientId) clientSelect.value = state.activeClientId;
+  loadClientIntoForm();
+}
+document.getElementById('addClientBtn').addEventListener('click', () => {
+  const name = document.getElementById('newClientName').value.trim();
+  if (!name) return;
+  const c = {
+    id: uid(), name,
+    gbpLink:'', bizName:'',
+    center:{ lat:null, lng:null, label:'' },
+    regionIdx: 0, gridSize: 7, spacingKm: 1.5, surface: 'local',
+    keywords: [], activeKeywordId: null
+  };
+  state.clients.push(c);
+  state.activeClientId = c.id;
+  document.getElementById('newClientName').value = '';
+  saveState(); renderClients();
+});
+document.getElementById('deleteClientBtn').addEventListener('click', () => {
+  const c = activeClient();
+  if (!c) return;
+  if (!confirm('Delete client “' + c.name + '” and all its keywords and scans?')) return;
+  state.clients = state.clients.filter(x => x.id !== c.id);
+  state.activeClientId = state.clients.length ? state.clients[0].id : null;
+  saveState(); renderClients(); renderKeywords(); clearMapDots(); renderHistory(); updateSummary(null);
+});
+clientSelect.addEventListener('change', () => {
+  state.activeClientId = clientSelect.value || null;
+  saveState(); loadClientIntoForm();
+});
+
+function loadClientIntoForm(){
+  const c = activeClient();
+  gbpLinkInput.value = c ? c.gbpLink : '';
+  bizNameInput.value = c ? c.bizName : '';
+  document.getElementById('tLoc').value = c ? c.center.label : '';
+  document.getElementById('tLat').value = c && c.center.lat != null ? c.center.lat : '';
+  document.getElementById('tLng').value = c && c.center.lng != null ? c.center.lng : '';
+  document.getElementById('gridSize').value = c ? c.gridSize : 7;
+  document.getElementById('spacing').value = c ? c.spacingKm : 1.5;
+  document.getElementById('surface').value = c ? c.surface : 'local';
+  tRegionSelect.value = c ? c.regionIdx : 0;
+  renderKeywords();
+  renderHistory();
+  const kw = activeKeyword();
+  const latest = kw && kw.scans.length ? kw.scans[kw.scans.length-1] : null;
+  drawScan(latest);
+  recenterMap();
+}
+function persistClientFields(){
+  const c = activeClient();
+  if (!c) return;
+  c.gbpLink = gbpLinkInput.value.trim();
+  c.bizName = bizNameInput.value.trim();
+  c.center.label = document.getElementById('tLoc').value.trim();
+  const lat = parseFloat(document.getElementById('tLat').value);
+  const lng = parseFloat(document.getElementById('tLng').value);
+  c.center.lat = isNaN(lat) ? null : lat;
+  c.center.lng = isNaN(lng) ? null : lng;
+  c.gridSize = parseInt(document.getElementById('gridSize').value, 10);
+  c.spacingKm = parseFloat(document.getElementById('spacing').value) || 1.5;
+  c.surface = document.getElementById('surface').value;
+  c.regionIdx = parseInt(tRegionSelect.value, 10) || 0;
+  saveState();
+}
+['tLoc','tLat','tLng','spacing'].forEach(id =>
+  document.getElementById(id).addEventListener('input', persistClientFields));
+['gridSize','surface'].forEach(id =>
+  document.getElementById(id).addEventListener('change', persistClientFields));
+tRegionSelect.addEventListener('change', persistClientFields);
+
+/* ---------- Tracker geocoding ---------- */
+const tGeocodeBtn = document.getElementById('tGeocodeBtn');
+const tGeoStatus = document.getElementById('tGeoStatus');
+function setTGeoStatus(msg, kind){
+  tGeoStatus.textContent = msg;
+  tGeoStatus.className = 'geocode-status' + (kind ? ' ' + kind : '');
+}
+tGeocodeBtn.addEventListener('click', async () => {
+  const q = document.getElementById('tLoc').value.trim();
+  if (!q){ setTGeoStatus('Enter the business address first.', 'err'); return; }
+  tGeocodeBtn.disabled = true;
+  setTGeoStatus('Looking up “' + q + '”…', '');
+  try{
+    const hit = await nominatim(q);
+    if (!hit){ setTGeoStatus('No match found. Add city / province to the query.', 'err'); return; }
+    document.getElementById('tLat').value = parseFloat(hit.lat).toFixed(7);
+    document.getElementById('tLng').value = parseFloat(hit.lon).toFixed(7);
+    setTGeoStatus('✓ ' + hit.display_name, 'ok');
+    persistClientFields();
+    recenterMap();
+  } catch(err){
+    setTGeoStatus('Geocoding failed (' + err.message + ').', 'err');
+  } finally {
+    tGeocodeBtn.disabled = false;
+  }
+});
+
+/* ---------- Keywords ---------- */
+const kwChips = document.getElementById('kwChips');
+document.getElementById('addKwBtn').addEventListener('click', addKeyword);
+document.getElementById('kwInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); addKeyword(); }
+});
+function addKeyword(){
+  const c = activeClient();
+  const text = document.getElementById('kwInput').value.trim();
+  if (!c){ alert('Add a client first.'); return; }
+  if (!text) return;
+  if (c.keywords.some(k => k.text.toLowerCase() === text.toLowerCase())){
+    document.getElementById('kwInput').value = ''; return;
+  }
+  const kw = { id: uid(), text, scans: [] };
+  c.keywords.push(kw);
+  c.activeKeywordId = kw.id;
+  document.getElementById('kwInput').value = '';
+  saveState(); renderKeywords(); renderHistory(); drawScan(null);
+}
+function renderKeywords(){
+  const c = activeClient();
+  kwChips.innerHTML = '';
+  if (!c) return;
+  c.keywords.forEach(k => {
+    const chip = document.createElement('span');
+    chip.className = 'chip' + (k.id === c.activeKeywordId ? ' active' : '');
+    const label = document.createElement('span');
+    label.textContent = k.text + (k.scans.length ? ' · ' + k.scans.length : '');
+    const x = document.createElement('span');
+    x.className = 'x'; x.textContent = '✕'; x.title = 'Delete keyword';
+    x.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!confirm('Delete keyword “' + k.text + '” and its scan history?')) return;
+      c.keywords = c.keywords.filter(w => w.id !== k.id);
+      if (c.activeKeywordId === k.id) c.activeKeywordId = c.keywords.length ? c.keywords[0].id : null;
+      saveState(); renderKeywords(); renderHistory();
+      const kw = activeKeyword();
+      drawScan(kw && kw.scans.length ? kw.scans[kw.scans.length-1] : null);
+    });
+    chip.appendChild(label); chip.appendChild(x);
+    chip.addEventListener('click', () => {
+      c.activeKeywordId = k.id;
+      saveState(); renderKeywords(); renderHistory();
+      drawScan(k.scans.length ? k.scans[k.scans.length-1] : null);
+    });
+    kwChips.appendChild(chip);
+  });
+}
+
+/* ---------- Grid geometry & URLs ---------- */
+function gridPoints(lat, lng, rows, spacingKm){
+  const half = (rows - 1) / 2;
+  const pts = [];
+  for (let r = 0; r < rows; r++){
+    for (let col = 0; col < rows; col++){
+      const dNorthKm = (half - r) * spacingKm;
+      const dEastKm  = (col - half) * spacingKm;
+      pts.push({
+        lat: lat + dNorthKm / 110.574,
+        lng: lng + dEastKm / (111.320 * Math.cos(lat * Math.PI / 180)),
+        row: r, col: col
+      });
+    }
+  }
+  return pts;
+}
+function buildScanUrl(keyword, lat, lng, opts){
+  const parts = [];
+  parts.push('q=' + encodeURIComponent(keyword));
+  parts.push('hl=' + encodeURIComponent(opts.hl));
+  parts.push('gl=' + encodeURIComponent(opts.gl));
+  parts.push('ie=utf-8'); parts.push('oe=utf-8'); parts.push('pws=0');
+  parts.push('uule=' + uuleForUrl(buildUuleLatLng(lat, lng, '93000')));
+  parts.push('num=20');
+  if (opts.surface === 'local') parts.push('tbm=lcl');
+  return 'https://www.google.com/search?' + parts.join('&');
+}
+function mapsUrl(keyword, lat, lng, hl){
+  return 'https://www.google.com/maps/search/' + encodeURIComponent(keyword) +
+         '/@' + lat.toFixed(7) + ',' + lng.toFixed(7) + ',14z?hl=' + encodeURIComponent(hl);
+}
+
+/* ---------- Leaflet map & dots ---------- */
+const map = L.map('map', { zoomControl: true }).setView([52.2690628, -113.8141464], 12);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+let dotLayer = L.layerGroup().addTo(map);
+let centerMarker = null;
+
+function recenterMap(){
+  const c = activeClient();
+  if (c && c.center.lat != null && c.center.lng != null){
+    map.setView([c.center.lat, c.center.lng], 12);
+    if (centerMarker) centerMarker.remove();
+    centerMarker = L.marker([c.center.lat, c.center.lng], { title: c.bizName || c.name }).addTo(map);
+  }
+}
+function clearMapDots(){ dotLayer.clearLayers(); }
+
+function rankClass(rank){
+  if (rank == null) return 'none';
+  if (rank === 0 || rank > 20) return 'lost';
+  if (rank <= 3) return 'good';
+  if (rank <= 10) return 'mid';
+  return 'bad';
+}
+function rankLabel(rank){
+  if (rank == null) return '·';
+  if (rank === 0 || rank > 20) return '21+';
+  return String(rank);
+}
+
+let liveMarkers = []; // markers of the scan currently on the map
+
+function drawScan(scan){
+  clearMapDots();
+  liveMarkers = [];
+  updateSummary(scan);
+  if (!scan) return;
+  scan.points.forEach((p, idx) => {
+    addDot(p, idx, scan);
+  });
+  recenterMap();
+}
+function addDot(p, idx, scan){
+  const icon = L.divIcon({
+    className: '',
+    html: '<div class="rank-dot ' + rankClass(p.rank) + '" id="dot-' + idx + '">' + rankLabel(p.rank) + '</div>',
+    iconSize: [34, 34], iconAnchor: [17, 17]
+  });
+  const m = L.marker([p.lat, p.lng], { icon }).addTo(dotLayer);
+  m.bindPopup(() => dotPopup(p, idx, scan));
+  liveMarkers[idx] = m;
+}
+function refreshDot(idx, scan){
+  if (liveMarkers[idx]){ dotLayer.removeLayer(liveMarkers[idx]); }
+  addDot(scan.points[idx], idx, scan);
+}
+function dotPopup(p, idx, scan){
+  const div = document.createElement('div');
+  const title = document.createElement('div');
+  title.className = 'pop-title';
+  title.textContent = 'Point ' + (p.row + 1) + '×' + (p.col + 1) +
+    ' — rank ' + (p.rank == null ? 'not scanned' : rankLabel(p.rank));
+  div.appendChild(title);
+
+  if (p.matched){
+    const matched = document.createElement('div');
+    matched.textContent = 'Matched: ' + p.matched;
+    div.appendChild(matched);
+  }
+  const coords = document.createElement('div');
+  coords.textContent = p.lat.toFixed(5) + ', ' + p.lng.toFixed(5);
+  coords.style.color = '#8a8370';
+  div.appendChild(coords);
+
+  const l1 = document.createElement('div');
+  const a1 = document.createElement('a');
+  a1.href = p.url; a1.target = '_blank'; a1.rel = 'noopener';
+  a1.textContent = '↗ Open the exact scanned search';
+  l1.appendChild(a1); div.appendChild(l1);
+
+  const l2 = document.createElement('div');
+  const a2 = document.createElement('a');
+  a2.href = p.mapsUrl; a2.target = '_blank'; a2.rel = 'noopener';
+  a2.textContent = '↗ Open Google Maps at this point';
+  l2.appendChild(a2); div.appendChild(l2);
+
+  // Manual rank entry
+  const manual = document.createElement('div');
+  manual.style.marginTop = '6px';
+  const inp = document.createElement('input');
+  inp.className = 'mini'; inp.placeholder = 'rank'; inp.inputMode = 'numeric';
+  if (p.rank != null) inp.value = p.rank;
+  const btn = document.createElement('button');
+  btn.className = 'chip-btn'; btn.textContent = 'Save rank'; btn.style.marginLeft = '6px';
+  btn.addEventListener('click', () => {
+    const v = parseInt(inp.value, 10);
+    p.rank = isNaN(v) ? null : v;
+    saveState();
+    refreshDot(idx, scan);
+    updateSummary(scan);
+    map.closePopup();
+  });
+  manual.appendChild(inp); manual.appendChild(btn);
+  div.appendChild(manual);
+  return div;
+}
+
+function updateSummary(scan){
+  const pts = scan ? scan.points : [];
+  const ranked = pts.filter(p => p.rank != null && p.rank > 0 && p.rank <= 20);
+  const found = pts.filter(p => p.rank != null && p.rank > 0 && p.rank <= 20).length;
+  const top3 = pts.filter(p => p.rank != null && p.rank >= 1 && p.rank <= 3).length;
+  const avg = ranked.length
+    ? (ranked.reduce((s,p) => s + p.rank, 0) / ranked.length).toFixed(1) : '—';
+  document.getElementById('statAvg').textContent = avg;
+  document.getElementById('statTop3').textContent = pts.length ? top3 + '/' + pts.length : '—';
+  document.getElementById('statVis').textContent = pts.length ? found + '/' + pts.length : '—';
+  document.getElementById('statPts').textContent = pts.length || '—';
+}
+
+/* ---------- Scan history ---------- */
+const historySelect = document.getElementById('historySelect');
+function renderHistory(){
+  historySelect.innerHTML = '';
+  const kw = activeKeyword();
+  if (!kw || !kw.scans.length){
+    const opt = document.createElement('option');
+    opt.textContent = '— no scans yet —'; opt.value = '';
+    historySelect.appendChild(opt);
+    return;
+  }
+  kw.scans.slice().reverse().forEach((s, revIdx) => {
+    const idx = kw.scans.length - 1 - revIdx;
+    const opt = document.createElement('option');
+    opt.value = idx;
+    const d = new Date(s.ts);
+    opt.textContent = d.toLocaleString() + ' · ' + s.grid.rows + '×' + s.grid.rows +
+      ' · ' + s.grid.spacingKm + 'km' + (s.partial ? ' · partial' : '');
+    historySelect.appendChild(opt);
+  });
+  historySelect.value = String(kw.scans.length - 1);
+}
+historySelect.addEventListener('change', () => {
+  const kw = activeKeyword();
+  if (!kw) return;
+  const idx = parseInt(historySelect.value, 10);
+  if (!isNaN(idx) && kw.scans[idx]) drawScan(kw.scans[idx]);
+});
+
+/* ---------- Scan runner ---------- */
+const scanBtn = document.getElementById('scanBtn');
+const stopBtn = document.getElementById('stopBtn');
+const scanStatus = document.getElementById('scanStatus');
+const progressBar = document.getElementById('progressBar');
+let scanning = false;
+let stopRequested = false;
+
+function setScanStatus(msg, kind){
+  scanStatus.textContent = msg;
+  scanStatus.className = 'scan-status' + (kind ? ' ' + kind : '');
+}
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+scanBtn.addEventListener('click', async () => {
+  const c = activeClient();
+  const kw = activeKeyword();
+  if (!c){ setScanStatus('Add and select a client first.', 'err'); return; }
+  if (!kw){ setScanStatus('Save a keyword and click it to make it active.', 'err'); return; }
+  if (c.center.lat == null || c.center.lng == null){
+    setScanStatus('Set the grid centre (geocode the address or enter lat/lng).', 'err'); return;
+  }
+  if (!c.bizName){
+    setScanStatus('Enter the business name — ranks are matched against it.', 'err'); return;
+  }
+  persistClientFields();
+
+  const region = REGIONS[c.regionIdx] || REGIONS[0];
+  const opts = { hl: region.hl, gl: region.gl, surface: c.surface };
+  const pts = gridPoints(c.center.lat, c.center.lng, c.gridSize, c.spacingKm)
+    .map(p => ({
+      ...p, rank: null, matched: null,
+      url: buildScanUrl(kw.text, p.lat, p.lng, opts),
+      mapsUrl: mapsUrl(kw.text, p.lat, p.lng, region.hl)
+    }));
+  const scan = {
+    ts: Date.now(),
+    grid: { rows: c.gridSize, spacingKm: c.spacingKm },
+    surface: c.surface, region: region.label,
+    partial: true,
+    points: pts
+  };
+  kw.scans.push(scan);
+  saveState(); renderHistory(); renderKeywords();
+  drawScan(scan);
+
+  if (!extReady){
+    scan.partial = true;
+    setScanStatus('Extension not detected — grid built in manual mode. Click each grey dot, ' +
+      'open its exact search link, and save the rank you see.', '');
+    return;
+  }
+
+  scanning = true; stopRequested = false;
+  scanBtn.disabled = true; stopBtn.disabled = false;
+  const delayS = Math.max(4, parseInt(document.getElementById('scanDelay').value, 10) || 12);
+
+  for (let i = 0; i < pts.length; i++){
+    if (stopRequested){ setScanStatus('Stopped at point ' + i + '/' + pts.length + '. Results so far are saved.', ''); break; }
+    const p = pts[i];
+    // mark scanning
+    const el = document.getElementById('dot-' + i);
+    if (el){ el.className = 'rank-dot scanning'; el.textContent = '…'; }
+    setScanStatus('Scanning point ' + (i+1) + '/' + pts.length + '…', '');
+
+    const res = await requestScan(p.url, c.bizName);
+    if (res.captcha){
+      setScanStatus('Google raised a CAPTCHA at point ' + (i+1) + '. Scan paused — solve it in the incognito window, wait a while, and rerun; remaining dots are manual.', 'err');
+      refreshDot(i, scan);
+      break;
+    }
+    if (res.ok){
+      const rank = res.localRank != null ? res.localRank
+                 : (res.organicRank != null && c.surface === 'web' ? res.organicRank : 0);
+      p.rank = rank === null ? 0 : rank;
+      p.matched = res.matchedTitle || null;
+      if (res.finalUrl) p.url = res.finalUrl; // the literal page the data came from
+    } else {
+      p.rank = null;
+      setScanStatus('Point ' + (i+1) + ' failed: ' + (res.error || 'unknown') + ' — continuing.', 'err');
+    }
+    refreshDot(i, scan);
+    updateSummary(scan);
+    saveState();
+
+    progressBar.style.width = Math.round(((i+1) / pts.length) * 100) + '%';
+    if (i < pts.length - 1){
+      const jitter = 0.75 + Math.random() * 0.5;
+      await sleep(delayS * 1000 * jitter);
+    }
+  }
+
+  scan.partial = scan.points.some(p => p.rank == null);
+  if (!scan.partial && !stopRequested) setScanStatus('Scan complete — saved to history.', 'ok');
+  scanning = false;
+  scanBtn.disabled = false; stopBtn.disabled = true;
+  progressBar.style.width = '0%';
+  saveState(); renderHistory();
+});
+stopBtn.addEventListener('click', () => { stopRequested = true; });
+
+/* ---------- Export / import ---------- */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'meridian-grid-data.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById('importBtn').addEventListener('click', () =>
+  document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if (!data || !Array.isArray(data.clients)) throw new Error('not a Meridian export');
+      state = data;
+      saveState(); renderClients();
+      setScanStatus('Data imported.', 'ok');
+    } catch(err){
+      setScanStatus('Import failed: ' + err.message, 'err');
+    }
+  };
+  reader.readAsText(file);
+});
+
+/* ---------- Init ---------- */
+renderClients();
 </script>
 </body>
 </html>
