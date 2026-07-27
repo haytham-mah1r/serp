@@ -230,6 +230,8 @@
   .rank-dot.none{background:var(--rank-none);}
   .rank-dot.current{outline:3px solid var(--brass); outline-offset:1px;}
   .rank-dot.unsure{border-style:dashed;}
+  .rank-dot.thin{border-style:dotted; border-width:3px;}
+  .rank-dot.failed{background:repeating-linear-gradient(45deg, var(--rank-none), var(--rank-none) 4px, #6b6450 4px, #6b6450 8px);}
   .leaflet-popup-content{font-family:var(--mono); font-size:12px; line-height:1.7;}
   .leaflet-popup-content a{color:var(--brass-dark);}
   .leaflet-popup-content input.mini{
@@ -511,6 +513,7 @@
 
         <button class="go" id="autoScanBtn">Scan grid automatically →</button>
         <button class="btn-secondary" id="stopAutoBtn" type="button" style="width:100%; margin-top:8px;" disabled>Stop automatic scan</button>
+        <button class="btn-secondary" id="retryFailedBtn" type="button" style="width:100%; margin-top:8px;" disabled>Retry unscanned / low-confidence points</button>
         <button class="btn-secondary" id="buildBtn" type="button" style="width:100%; margin-top:8px;">Build grid for manual paste mode</button>
         <div class="scan-status" id="scanStatus"></div>
 
@@ -529,6 +532,8 @@
           <span><i style="background:var(--rank-lost)"></i> deep (exact # shown) / 20+ not found</span>
           <span><i style="background:var(--rank-none)"></i> not scanned yet</span>
           <span><i style="background:var(--rank-mid); border:2px dashed #fff;"></i> matched by name only — verify</span>
+          <span><i style="background:var(--rank-mid); border:3px dotted #fff;"></i> thin API read — low confidence</span>
+          <span><i style="background:repeating-linear-gradient(45deg,var(--rank-none),var(--rank-none) 2px,#6b6450 2px,#6b6450 4px);"></i> scan failed here</span>
         </div>
         <div class="scan-status" id="mapStatus"></div>
 
@@ -1250,6 +1255,9 @@ function drawScan(scan){
   updateSummary(scan);
   renderVerdict(scan);
   updateAssistPanel();
+  if (typeof retryFailedBtn !== 'undefined'){
+    retryFailedBtn.disabled = !scan || !scan.points.some(p => p.rank == null || p.matchConfidence === 'fuzzy' || p.sparse);
+  }
   if (!scan) return;
   scan.points.forEach((p, idx) => addDot(p, idx, scan));
   recenterMap();
@@ -1257,9 +1265,12 @@ function drawScan(scan){
 function addDot(p, idx, scan){
   const cur = (scan === currentScan && idx === currentIdx) ? ' current' : '';
   const unsure = (p.matchConfidence === 'fuzzy') ? ' unsure' : '';
+  const thin = (p.sparse && p.rank != null) ? ' thin' : '';
+  const failed = (p.rank == null && p.error) ? ' failed' : '';
+  const label = failed ? '!' : rankLabel(p.rank);
   const icon = L.divIcon({
     className: '',
-    html: '<div class="rank-dot ' + rankClass(p.rank) + cur + unsure + '" id="dot-' + idx + '">' + rankLabel(p.rank) + '</div>',
+    html: '<div class="rank-dot ' + rankClass(p.rank) + cur + unsure + thin + failed + '" id="dot-' + idx + '">' + label + '</div>',
     iconSize: [34, 34], iconAnchor: [17, 17]
   });
   const m = L.marker([p.lat, p.lng], { icon }).addTo(dotLayer);
@@ -1299,6 +1310,18 @@ function dotPopup(p, idx, scan){
     adline.textContent = 'Also appears as a sponsored result (position ' + p.adRank + ' overall).';
     adline.style.color = '#8a8370';
     div.appendChild(adline);
+  }
+  if (p.rank == null && p.error){
+    const errline = document.createElement('div');
+    errline.textContent = 'Scan failed here: ' + p.error;
+    errline.style.color = '#9c3b2e';
+    div.appendChild(errline);
+  }
+  if (p.sparse && p.rank != null){
+    const sparseline = document.createElement('div');
+    sparseline.textContent = 'Only ' + p.names.length + ' listing(s) came back for this point — thin data, worth a retry or a manual check.';
+    sparseline.style.color = 'var(--rank-mid)';
+    div.appendChild(sparseline);
   }
   const coords = document.createElement('div');
   coords.textContent = p.lat.toFixed(5) + ', ' + p.lng.toFixed(5);
@@ -1364,6 +1387,23 @@ function dotPopup(p, idx, scan){
     box.scrollIntoView({ behavior:'smooth', block:'center' });
   });
   div.appendChild(scanHere);
+
+  // Retry just this point through the automatic provider
+  const retryHere = document.createElement('button');
+  retryHere.className = 'chip-btn';
+  retryHere.textContent = (p.rank == null) ? 'Retry this point automatically' : 'Re-check this point automatically';
+  retryHere.style.marginTop = '6px';
+  retryHere.style.marginLeft = '6px';
+  retryHere.addEventListener('click', async () => {
+    retryHere.disabled = true;
+    retryHere.textContent = 'Checking…';
+    try{
+      await retrySinglePoint(scan, idx);
+    } finally {
+      map.closePopup();
+    }
+  });
+  div.appendChild(retryHere);
 
   // Manual rank entry
   const manual = document.createElement('div');
@@ -1571,7 +1611,7 @@ function createScan(){
   const opts = { hl: region.hl, gl: region.gl, surface: c.surface };
   const pts = gridPoints(c.center.lat, c.center.lng, c.gridSize, c.spacingKm)
     .map(p => ({
-      ...p, rank: null, matched: null, adRank: null, matchConfidence: null, names: [],
+      ...p, rank: null, matched: null, adRank: null, matchConfidence: null, sparse: false, error: null, names: [],
       url: buildScanUrl(kw.text, p.lat, p.lng, opts),
       mapsUrl: mapsUrl(kw.text, p.lat, p.lng, region.hl)
     }));
@@ -1643,54 +1683,149 @@ async function runAutoScan(scan){
   const isDirect = (state.settings.provider === 'direct');
   const stepDelay = isDirect ? 1500 : 350;
   let consecutiveFails = 0;
+  let fatalHit = false;
+
+  // One point, with an immediate in-place retry before it's counted as failed —
+  // a single transient network blip should not permanently grey out a dot.
+  async function scanOnePoint(i, attempts){
+    const p = scan.points[i];
+    const el = document.getElementById('dot-' + i);
+    if (el) el.textContent = '…';
+    let lastErr = null;
+    for (let a = 0; a < attempts; a++){
+      if (autoStop) return false;
+      try{
+        const listings = await providerQuery(kw.text, p, region, c.surface);
+        applyListings(p, listings, c);
+        p.error = null;
+        refreshDot(i);
+        return true;
+      } catch (err){
+        lastErr = err;
+        if (err.fatal){ fatalHit = true; p.error = err.message; refreshDot(i); return false; }
+        if (a < attempts - 1) await sleep(Math.round(stepDelay * 0.6));
+      }
+    }
+    p.error = lastErr ? lastErr.message : 'unknown error';
+    refreshDot(i);
+    return false;
+  }
+
   for (let i = 0; i < total; i++){
     if (autoStop){
       setScanStatus('Stopped at point ' + i + '/' + total + ' — results so far are saved. Remaining dots can be pasted manually or re-run.', '');
       break;
     }
-    const p = scan.points[i];
-    const el = document.getElementById('dot-' + i);
-    if (el) el.textContent = '…';
     setScanStatus('Scanning point ' + (i + 1) + '/' + total + '…', '');
-    try{
-      const listings = await providerQuery(kw.text, p, region, c.surface);
-      applyListings(p, listings, c);
-      consecutiveFails = 0;
-    } catch (err){
+    const ok = await scanOnePoint(i, 2);
+    if (fatalHit){
+      setScanStatus('Scan aborted at point ' + (i + 1) + ': ' + scan.points[i].error, 'err');
+      break;
+    }
+    if (ok){ consecutiveFails = 0; }
+    else{
       consecutiveFails++;
-      if (err.fatal){
-        setScanStatus('Scan aborted at point ' + (i + 1) + ': ' + err.message, 'err');
-        break;
-      }
-      if (consecutiveFails >= 3){
-        setScanStatus('Aborted after 3 consecutive failures (' + err.message + ').' +
+      if (consecutiveFails >= 5){
+        setScanStatus('Paused after 5 consecutive failures (' + scan.points[i].error + ').' +
           (isDirect
             ? ' The free relay is being blocked — this is the expected failure mode of no-API scanning. Paste mode below always works; an API provider is always automatic.'
-            : ' Check the connection and credentials, then re-run; completed points are saved.'), 'err');
+            : ' Check the connection and credentials, then use “Retry unscanned / low-confidence points” once fixed; completed points are saved.'), 'err');
         break;
       }
-      setScanStatus('Point ' + (i + 1) + ' failed (' + err.message + ') — continuing.', 'err');
     }
-    refreshDot(i);
     updateSummary(scan); renderVerdict(scan); saveState();
     await sleep(stepDelay);
   }
 
+  // Automatic follow-up passes: re-attempt only the points that are still
+  // unresolved, so a handful of edge-of-grid failures don't require the
+  // person to notice and fix them by hand. Stops early on a fatal auth error.
+  if (!autoStop && !fatalHit){
+    let stragglers = scan.points.map((p, i) => i).filter(i => scan.points[i].rank == null);
+    let pass = 0;
+    while (stragglers.length && pass < 2 && !autoStop && !fatalHit){
+      pass++;
+      setScanStatus('Retry pass ' + pass + ' — re-checking ' + stragglers.length + ' point(s) that didn\u2019t resolve…', '');
+      const stillFailed = [];
+      for (const i of stragglers){
+        if (autoStop || fatalHit) break;
+        const ok = await scanOnePoint(i, 2);
+        if (!ok) stillFailed.push(i);
+        updateSummary(scan); renderVerdict(scan); saveState();
+        await sleep(stepDelay);
+      }
+      stragglers = stillFailed;
+    }
+  }
+
   autoRunning = false;
   autoScanBtn.disabled = false; stopAutoBtn.disabled = true;
+  retryFailedBtn.disabled = !scan.points.some(p => p.rank == null || p.matchConfidence === 'fuzzy' || p.sparse);
   renderHistory();
   currentIdx = nextUnscanned(scan, 0);
   updateAssistPanel();
   const done = scan.points.filter(p => p.rank != null).length;
   const fuzzyCount = scan.points.filter(p => p.matchConfidence === 'fuzzy').length;
+  const sparseCount = scan.points.filter(p => p.sparse && p.rank != null).length;
   if (!autoStop){
     let msg = done === total
       ? 'Automatic scan complete ✓ — ' + total + ' points ranked.'
-      : done + '/' + total + ' points ranked; failed ones can be re-run or pasted manually.';
-    if (fuzzyCount) msg += ' ' + fuzzyCount + ' matched by name only (dashed dot) — worth a quick manual check.';
+      : done + '/' + total + ' points ranked after retries; the rest failed repeatedly — use “Retry unscanned / low-confidence points” or paste them manually.';
+    if (fuzzyCount) msg += ' ' + fuzzyCount + ' matched by name only (dashed dot).';
+    if (sparseCount) msg += ' ' + sparseCount + ' had thin data (dotted dot).';
     setScanStatus(msg, done === total ? 'ok' : '');
   }
 }
+
+/* Re-check a single point on demand — used by the popup's retry button and
+   by the bulk "Retry unscanned / low-confidence points" pass. */
+async function retrySinglePoint(scan, idx){
+  const c = activeClient();
+  const kw = activeKeyword();
+  if (!c || !kw) return;
+  const region = REGIONS[c.regionIdx] || REGIONS[0];
+  const p = scan.points[idx];
+  const el = document.getElementById('dot-' + idx);
+  if (el) el.textContent = '…';
+  try{
+    const listings = await providerQuery(kw.text, p, region, c.surface);
+    applyListings(p, listings, c);
+    p.error = null;
+  } catch (err){
+    p.error = err.message;
+  }
+  refreshDot(idx);
+  updateSummary(scan); renderVerdict(scan); saveState();
+  if (typeof retryFailedBtn !== 'undefined'){
+    retryFailedBtn.disabled = !scan.points.some(x => x.rank == null || x.matchConfidence === 'fuzzy' || x.sparse);
+  }
+}
+
+const retryFailedBtn = document.getElementById('retryFailedBtn');
+retryFailedBtn.addEventListener('click', async () => {
+  const kw = activeKeyword();
+  const scan = kw && kw.scans.length ? kw.scans[kw.scans.length - 1] : null;
+  if (!scan) return;
+  const targets = scan.points.map((p, i) => i)
+    .filter(i => scan.points[i].rank == null || scan.points[i].matchConfidence === 'fuzzy' || scan.points[i].sparse);
+  if (!targets.length){ setScanStatus('Nothing flagged to retry — every point is a confident match.', 'ok'); return; }
+  retryFailedBtn.disabled = true; autoScanBtn.disabled = true;
+  autoStop = false;
+  const isDirect = (state.settings.provider === 'direct');
+  const stepDelay = isDirect ? 1500 : 350;
+  for (let n = 0; n < targets.length; n++){
+    if (autoStop) break;
+    setScanStatus('Re-checking flagged point ' + (n + 1) + '/' + targets.length + '…', '');
+    await retrySinglePoint(scan, targets[n]);
+    await sleep(stepDelay);
+  }
+  autoScanBtn.disabled = false;
+  const stillFlagged = scan.points.some(p => p.rank == null || p.matchConfidence === 'fuzzy' || p.sparse);
+  retryFailedBtn.disabled = !stillFlagged;
+  setScanStatus(stillFlagged
+    ? 'Retry pass done — some points are still unresolved or name-only; another retry or a manual paste may be needed.'
+    : 'Retry pass done — every point is now a confident match ✓', stillFlagged ? '' : 'ok');
+});
 
 function providerQuery(keyword, p, region, surface){
   const prov = state.settings.provider || 'dataforseo';
@@ -1867,9 +2002,11 @@ function normalizeDataForSeo(data, surface){
    fuzzy/token-overlap name match. The signal used is recorded as
    matchConfidence so a name-only guess is never silently indistinguishable
    from a verified identification. */
+const SPARSE_THRESHOLD = 3; // fewer listings than this = treat a "not found" here as low-confidence, not proof
 function applyListings(p, listings, c){
   p.names = listings.map(l => l.title).slice(0, 25);
   p.rank = 0; p.matched = null; p.adRank = null; p.matchConfidence = null;
+  p.sparse = listings.length < SPARSE_THRESHOLD;
   const strict = (state.settings.strictMatch === 'strict');
   for (let i = 0; i < listings.length; i++){
     const l = listings[i];
