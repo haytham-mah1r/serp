@@ -561,7 +561,7 @@
           </div>
           <div class="toggle">
             <input type="checkbox" id="includeAds"/>
-            <label for="includeAds" style="margin:0; text-transform:none; letter-spacing:0; font-size:11px;">Count sponsored results in the rank (off = organic positions only, like rank trackers do)</label>
+            <label for="includeAds" style="margin:0; text-transform:none; letter-spacing:0; font-size:11px;">Count sponsored results as a mention (applies to manual paste AND automatic scans — any ad appearance is always shown, this just decides if an ad-only appearance sets the rank number)</label>
           </div>
           <div class="scan-status" id="parseStatus"></div>
         </div>
@@ -599,14 +599,17 @@
     <strong>How scanning works:</strong> browsers forbid a web page from fetching Google's pages
     itself — a hard security rule, with no exception. So automatic mode does what every grid
     tracker does behind the scenes: each point is sent to a SERP data API (DataForSEO or Serper.dev),
-    which queries Google server-side at that exact coordinate and returns the ranked places as JSON.
-    The platform then identifies your business at each point using the strongest signal available,
-    in order: <strong>CID</strong> (from the GBP link) → <strong>phone number</strong> → <strong>exact
-    name</strong> → <strong>fuzzy name</strong> match, and every dot's popup shows which signal was
-    used so a fuzzy (name-only) match can be spotted and double-checked at a glance. No key? Manual
-    mode is free: open a dot's pinned search, Ctrl+A · Ctrl+C, paste it back — the built-in parser
-    reads the listings, skips sponsored results, and ranks the dot the same way. Every dot's popup
-    keeps the exact <code>uule</code> URL so any number can be verified against the live page.
+    which queries Google server-side at that exact coordinate and returns the ranked places <em>and</em>
+    any sponsored/ad placements as JSON. The platform identifies your business at each point using the
+    strongest signal available, in order: <strong>CID</strong> (from the GBP link) → <strong>phone
+    number</strong> → <strong>exact name</strong> → <strong>fuzzy name</strong> match — and it checks
+    for that identification in the sponsored results too, so a business that only shows up as an ad is
+    never invisible. Every dot's popup shows which signal was used and whether the mention was organic
+    or sponsored, so a fuzzy (name-only) or ad-only match can be spotted and double-checked at a glance.
+    No key? Manual mode is free: open a dot's pinned search, Ctrl+A · Ctrl+C, paste it back — the
+    built-in parser reads both the organic and sponsored listings and ranks the dot the same way.
+    Every dot's popup keeps the exact <code>uule</code> URL so any number can be verified against the
+    live page.
   </p>
   <div class="footer-links">
     <a href="https://developers.google.com/web/tools/chrome-devtools/device-mode/device-input-and-sensors" target="_blank" rel="noopener">Chrome DevTools “Sensors” location override</a> ·
@@ -867,7 +870,7 @@ document.getElementById('q').addEventListener('keydown', e => {
 /* ---------- Persistence (localStorage with in-memory fallback) ---------- */
 const STORE_KEY = 'meridian-grid-tracker-v1';
 let memoryStore = null;
-const DEFAULT_SETTINGS = { provider:'dataforseo', relay:'allorigins', serperKey:'', dfsLogin:'', dfsPassword:'', proxyPrefix:'', strictMatch:'loose' };
+const DEFAULT_SETTINGS = { provider:'dataforseo', relay:'allorigins', serperKey:'', dfsLogin:'', dfsPassword:'', proxyPrefix:'', strictMatch:'loose', includeAds:true };
 function loadState(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
@@ -959,6 +962,7 @@ const dfsLoginInput = document.getElementById('dfsLogin');
 const dfsPasswordInput = document.getElementById('dfsPassword');
 const proxyPrefixInput = document.getElementById('proxyPrefix');
 const strictMatchSelect = document.getElementById('strictMatch');
+const includeAdsCheckbox = document.getElementById('includeAds');
 
 providerSelect.value = state.settings.provider || 'dataforseo';
 relaySelect.value = state.settings.relay || 'allorigins';
@@ -967,6 +971,7 @@ dfsLoginInput.value = state.settings.dfsLogin || '';
 dfsPasswordInput.value = state.settings.dfsPassword || '';
 proxyPrefixInput.value = state.settings.proxyPrefix || '';
 strictMatchSelect.value = state.settings.strictMatch || 'loose';
+includeAdsCheckbox.checked = state.settings.includeAds !== false;
 
 function toggleProviderFields(){
   const p = providerSelect.value;
@@ -995,6 +1000,9 @@ proxyPrefixInput.addEventListener('input', () => {
 });
 strictMatchSelect.addEventListener('change', () => {
   state.settings.strictMatch = strictMatchSelect.value; saveState();
+});
+includeAdsCheckbox.addEventListener('change', () => {
+  state.settings.includeAds = includeAdsCheckbox.checked; saveState();
 });
 
 /* ---------- Client management ---------- */
@@ -1296,7 +1304,7 @@ function dotPopup(p, idx, scan){
 
   if (p.matched){
     const matched = document.createElement('div');
-    matched.textContent = 'Matched: ' + p.matched;
+    matched.textContent = 'Matched: ' + p.matched + (p.matchedViaAd ? ' (via a sponsored result)' : '');
     if (p.matchConfidence && CONF_LABELS[p.matchConfidence]){
       const tag = document.createElement('span');
       tag.className = 'conf-tag ' + p.matchConfidence;
@@ -1305,9 +1313,14 @@ function dotPopup(p, idx, scan){
     }
     div.appendChild(matched);
   }
-  if (p.adRank){
+  if (p.adRank && !p.matchedViaAd){
     const adline = document.createElement('div');
-    adline.textContent = 'Also appears as a sponsored result (position ' + p.adRank + ' overall).';
+    adline.textContent = 'Also appears as a sponsored result: “' + p.adMatched + '” (sponsored slot #' + p.adRank + ').';
+    adline.style.color = '#8a8370';
+    div.appendChild(adline);
+  } else if (p.adRank && p.matchedViaAd){
+    const adline = document.createElement('div');
+    adline.textContent = 'Found only as a sponsored result here (slot #' + p.adRank + ') — no organic/local listing.';
     adline.style.color = '#8a8370';
     div.appendChild(adline);
   }
@@ -1368,6 +1381,36 @@ function dotPopup(p, idx, scan){
     });
     det.appendChild(ol);
     div.appendChild(det);
+  }
+  if (p.adNames && p.adNames.length){
+    const det2 = document.createElement('details');
+    const sum2 = document.createElement('summary');
+    sum2.textContent = 'Sponsored results read here (' + p.adNames.length + ') — click yours to set the rank';
+    sum2.style.cursor = 'pointer';
+    sum2.style.color = '#7a5426';
+    det2.appendChild(sum2);
+    const ol2 = document.createElement('ol');
+    ol2.style.cssText = 'margin:4px 0 0 18px; padding:0; max-height:160px; overflow:auto;';
+    p.adNames.forEach((n, i) => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = '#'; a.textContent = n + ' (sponsored)';
+      if (p.adMatched && n === p.adMatched){ a.style.fontWeight = '700'; }
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        p.adRank = i + 1; p.adMatched = n;
+        p.rank = (p.names ? p.names.length : 0) + i + 1;
+        p.matched = n; p.matchConfidence = 'manual'; p.matchedViaAd = true;
+        saveState();
+        refreshDot(idx);
+        updateSummary(scan); renderVerdict(scan);
+        map.closePopup();
+      });
+      li.appendChild(a);
+      ol2.appendChild(li);
+    });
+    det2.appendChild(ol2);
+    div.appendChild(det2);
   }
 
   // Route this dot into the paste-scanner
@@ -1767,12 +1810,16 @@ async function runAutoScan(scan){
   const done = scan.points.filter(p => p.rank != null).length;
   const fuzzyCount = scan.points.filter(p => p.matchConfidence === 'fuzzy').length;
   const sparseCount = scan.points.filter(p => p.sparse && p.rank != null).length;
+  const adOnlyCount = scan.points.filter(p => p.matchedViaAd).length;
+  const adMentionCount = scan.points.filter(p => p.adRank).length;
   if (!autoStop){
     let msg = done === total
       ? 'Automatic scan complete ✓ — ' + total + ' points ranked.'
       : done + '/' + total + ' points ranked after retries; the rest failed repeatedly — use “Retry unscanned / low-confidence points” or paste them manually.';
     if (fuzzyCount) msg += ' ' + fuzzyCount + ' matched by name only (dashed dot).';
     if (sparseCount) msg += ' ' + sparseCount + ' had thin data (dotted dot).';
+    if (adOnlyCount) msg += ' ' + adOnlyCount + ' were found only as a sponsored result.';
+    if (adMentionCount) msg += ' ' + adMentionCount + ' total point(s) had a sponsored mention (organic or ad-only).';
     setScanStatus(msg, done === total ? 'ok' : '');
   }
 }
@@ -1876,7 +1923,10 @@ async function directQuery(p){
     }
     throw new Error('no listings recognized in the fetched page');
   }
-  return parsed.entries.filter(e => !e.ad).map(e => ({ title: e.name, cid: null, phone: null }));
+  return {
+    organic: parsed.entries.filter(e => !e.ad).map(e => ({ title: e.name, cid: null, phone: null })),
+    ads: parsed.entries.filter(e => e.ad).map(e => ({ title: e.name, cid: null, phone: null }))
+  };
 }
 
 async function serperQuery(keyword, p, region, surface){
@@ -1922,8 +1972,14 @@ function normalizeSerper(data){
     phone: x.phoneNumber || x.phone || null,
     address: x.address || null
   })).filter(x => x.title);
-  if (places.length) return places;
-  return (data.organic || []).map(x => ({ title: x.title || '', cid: null, phone: null })).filter(x => x.title);
+  const ads = (data.ads || []).map(x => ({
+    title: x.title || '',
+    cid: null,
+    phone: x.phoneNumber || x.phone || null
+  })).filter(x => x.title);
+  const organic = places.length ? places
+    : (data.organic || []).map(x => ({ title: x.title || '', cid: null, phone: null })).filter(x => x.title);
+  return { organic, ads };
 }
 
 /* ---- DataForSEO (Basic Auth: API login + API password) ----
@@ -1987,37 +2043,72 @@ function normalizeDataForSeo(data, surface){
     const pack = items.filter(it => it.type === 'local_pack')
       .map(it => ({ title: it.title || '', cid: it.cid || null, phone: it.phone || null, address: it.address || null }))
       .filter(x => x.title);
-    if (pack.length) return pack;
-    return items.filter(it => it.type === 'organic')
+    const organic = pack.length ? pack
+      : items.filter(it => it.type === 'organic')
+          .map(it => ({ title: it.title || '', cid: null, phone: null })).filter(x => x.title);
+    const ads = items.filter(it => it.type === 'paid')
       .map(it => ({ title: it.title || '', cid: null, phone: null })).filter(x => x.title);
+    return { organic, ads };
   }
-  // Maps surface: ranked places, excluding paid items.
-  return items.filter(it => it.type === 'maps_search')
+  // Maps surface: ranked places, split into organic vs. sponsored placements.
+  const organic = items.filter(it => it.type === 'maps_search' && !it.is_paid)
     .map(it => ({ title: it.title || '', cid: it.cid || null, phone: it.phone || null, address: it.address || null }))
     .filter(x => x.title);
+  const ads = items.filter(it => it.is_paid || it.type === 'maps_paid')
+    .map(it => ({ title: it.title || '', cid: it.cid || null, phone: it.phone || null }))
+    .filter(x => x.title);
+  return { organic, ads };
 }
 
 /* Identify the client's listing among the returned results, in order of
    certainty: CID (from the GBP link) > phone number > exact name match >
-   fuzzy/token-overlap name match. The signal used is recorded as
-   matchConfidence so a name-only guess is never silently indistinguishable
-   from a verified identification. */
+   fuzzy/token-overlap name match. Organic and sponsored results are checked
+   separately — a sponsored-only mention is always recorded (p.adRank /
+   p.adMatched), and if "includeAds" is on, an ad-only mention also sets the
+   dot's rank instead of leaving it marked as not-found. */
 const SPARSE_THRESHOLD = 3; // fewer listings than this = treat a "not found" here as low-confidence, not proof
-function applyListings(p, listings, c){
-  p.names = listings.map(l => l.title).slice(0, 25);
-  p.rank = 0; p.matched = null; p.adRank = null; p.matchConfidence = null;
-  p.sparse = listings.length < SPARSE_THRESHOLD;
+function identifyMatch(l, c, strict){
+  const cidHit   = !!(c.cid && l.cid && String(l.cid) === String(c.cid));
+  const phoneHit = !cidHit && !!(c.phone && l.phone && phoneMatches(c.phone, l.phone));
+  const exactHit = !cidHit && !phoneHit && normName(l.title) === normName(c.bizName) && !!normName(c.bizName);
+  const fuzzyHit = !strict && !cidHit && !phoneHit && !exactHit && nameMatches(l.title, c.bizName);
+  if (cidHit) return 'cid';
+  if (phoneHit) return 'phone';
+  if (exactHit) return 'exact';
+  if (fuzzyHit) return 'fuzzy';
+  return null;
+}
+function applyListings(p, results, c){
+  const organic = (results && results.organic) || [];
+  const ads = (results && results.ads) || [];
+  p.names = organic.map(l => l.title).slice(0, 25);
+  p.adNames = ads.map(l => l.title).slice(0, 25);
+  p.rank = 0; p.matched = null; p.adRank = null; p.adMatched = null;
+  p.matchConfidence = null; p.matchedViaAd = false;
+  p.sparse = organic.length < SPARSE_THRESHOLD;
   const strict = (state.settings.strictMatch === 'strict');
-  for (let i = 0; i < listings.length; i++){
-    const l = listings[i];
-    const cidHit   = !!(c.cid && l.cid && String(l.cid) === String(c.cid));
-    const phoneHit = !cidHit && !!(c.phone && l.phone && phoneMatches(c.phone, l.phone));
-    const exactHit = !cidHit && !phoneHit && normName(l.title) === normName(c.bizName) && !!normName(c.bizName);
-    const fuzzyHit = !strict && !cidHit && !phoneHit && !exactHit && nameMatches(l.title, c.bizName);
-    if (cidHit || phoneHit || exactHit || fuzzyHit){
-      p.rank = i + 1;
-      p.matched = l.title;
-      p.matchConfidence = cidHit ? 'cid' : phoneHit ? 'phone' : exactHit ? 'exact' : 'fuzzy';
+  const includeAds = state.settings.includeAds !== false;
+
+  for (let i = 0; i < organic.length; i++){
+    const conf = identifyMatch(organic[i], c, strict);
+    if (conf){ p.rank = i + 1; p.matched = organic[i].title; p.matchConfidence = conf; break; }
+  }
+
+  // Any sponsored mention is always recorded, independent of the includeAds
+  // setting — "no mention, no matter what the nature" should never be silent.
+  for (let i = 0; i < ads.length; i++){
+    const conf = identifyMatch(ads[i], c, strict);
+    if (conf){
+      p.adRank = i + 1;
+      p.adMatched = ads[i].title;
+      if (p.rank === 0 && includeAds){
+        // No organic mention — an ad-only appearance still counts as being
+        // found on the page, so it sets the rank (appended after organic).
+        p.rank = organic.length + i + 1;
+        p.matched = ads[i].title;
+        p.matchConfidence = conf;
+        p.matchedViaAd = true;
+      }
       break;
     }
   }
@@ -2102,8 +2193,11 @@ function runParse(fromGesture){
   p.rank = result.rank;             // 0 = not present in the results read
   p.matched = result.matched;
   p.adRank = result.adRank;
+  p.adMatched = result.adMatched;
+  p.matchedViaAd = result.matchedViaAd;
   p.matchConfidence = result.rank ? 'fuzzy' : null;
   p.names = result.organicNames.slice(0, 25);
+  p.adNames = result.adNames.slice(0, 25);
   saveState();
 
   const prev = currentIdx;
@@ -2124,9 +2218,9 @@ function runParse(fromGesture){
   } else if (result.adRank){
     msg += 'Only found as a sponsored result — recorded as 20+.';
   } else {
-    msg += 'Business not in the ' + result.organicNames.length + ' listings read — recorded as 20+. ' +
+    msg += 'Business not in the ' + result.organicNames.length + ' organic listings or ' + result.adNames.length + ' sponsored listing(s) read — recorded as 20+. ' +
       'If you can see it on the page, scroll the finder to load it before copying, ' +
-      'or open the dot\u2019s “Results read here” list and click your listing to correct.';
+      'or open the dot\u2019s “Results read here” / “Sponsored results read here” list and click your listing to correct.';
   }
   if (currentIdx != null){
     msg += ' Next: point ' + (currentIdx + 1) + '.';
@@ -2203,16 +2297,18 @@ function parsePastedResults(text, bizName, includeAds){
   }
 
   // Rank the target
-  let rank = 0, matched = null, adRank = null;
+  let rank = 0, matched = null, adRank = null, adMatched = null, matchedViaAd = false;
   const organicNames = [];
-  let organicPos = 0, overallPos = 0;
+  const adNames = [];
+  let organicPos = 0, overallPos = 0, adPos = 0;
   entries.forEach(e => {
     overallPos++;
     if (!e.ad){ organicPos++; organicNames.push(e.name); }
+    else { adPos++; adNames.push(e.name); }
     if (bizName && nameMatches(e.name, bizName)){
       if (e.ad){
-        if (adRank == null) adRank = overallPos;
-        if (includeAds && rank === 0){ rank = overallPos; matched = e.name; }
+        if (adRank == null){ adRank = adPos; adMatched = e.name; }
+        if (includeAds && rank === 0){ rank = overallPos; matched = e.name; matchedViaAd = true; }
       } else if (rank === 0 || (!includeAds && matched == null)){
         rank = includeAds ? overallPos : organicPos;
         matched = e.name;
@@ -2223,8 +2319,8 @@ function parsePastedResults(text, bizName, includeAds){
   return {
     entries,
     adCount: entries.filter(e => e.ad).length,
-    organicNames,
-    rank, matched, adRank
+    organicNames, adNames,
+    rank, matched, adRank, adMatched, matchedViaAd
   };
 }
 
