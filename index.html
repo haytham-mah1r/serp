@@ -268,6 +268,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="checker">SERP Checker</button>
     <button class="tab" data-tab="tracker">Grid Rank Tracker</button>
+    <button class="tab" data-tab="keywords">Keyword Finder</button>
   </div>
 
   <!-- ============================ TAB 1: SERP CHECKER ============================ -->
@@ -587,7 +588,85 @@
   </div>
   </div>
 
-  <p class="note">
+  <!-- ============================ TAB 3: KEYWORD FINDER ============================ -->
+  <div class="panel" id="panel-keywords">
+  <div class="card">
+    <div class="field">
+      <label for="kwSiteUrl">Website</label>
+      <input id="kwSiteUrl" type="text" placeholder="https://www.example.com or example.com" autocomplete="off"/>
+      <div class="hint">The domain the keyword lookup runs against. Protocol and <code>www.</code> are stripped automatically.</div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label for="kwGbpLink">GBP share link (optional)</label>
+        <input id="kwGbpLink" type="text" placeholder="https://share.google/…  or full maps URL" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label for="kwBizName">Business name</label>
+        <input id="kwBizName" type="text" placeholder="EDGE Marketing &amp; Design Inc." autocomplete="off"/>
+      </div>
+    </div>
+    <div class="field">
+      <label for="kwBizPhone">Business phone (optional, carried over for accurate matching)</label>
+      <input id="kwBizPhone" type="text" inputmode="tel" placeholder="(403) 555-0142" autocomplete="off"/>
+    </div>
+
+    <hr class="divider"/>
+
+    <div class="row2">
+      <div class="field">
+        <label for="kwLocationName">Location to check rankings in</label>
+        <input id="kwLocationName" type="text" placeholder="Red Deer,Alberta,Canada" autocomplete="off"/>
+        <div class="hint">DataForSEO's location-name format — City,Region,Country, or just a country name like “Canada”. Must match their geo-target list; this is what "in what area" is scoped to.</div>
+      </div>
+      <div class="field">
+        <label for="kwRegion">Language</label>
+        <select id="kwRegion"></select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label for="kwMinVolume">Minimum monthly search volume</label>
+        <input id="kwMinVolume" type="text" inputmode="numeric" placeholder="0" autocomplete="off"/>
+      </div>
+      <div class="field">
+        <label for="kwMaxPosition">Maximum position to include</label>
+        <input id="kwMaxPosition" type="text" inputmode="numeric" placeholder="100" autocomplete="off"/>
+      </div>
+    </div>
+
+    <button class="go" id="kwFindBtn">Find ranking keywords →</button>
+    <div class="hint" style="margin-top:8px;">Uses the DataForSEO credentials entered in the Grid Rank Tracker tab (DataForSEO Labs' ranked-keywords data — a separate line item from the live SERP calls used there). No DataForSEO account? Use the manual paste box below instead — it's free and works with any keyword export (Search Console, Ahrefs, SEMrush, etc.).</div>
+    <div class="scan-status" id="kwStatus"></div>
+
+    <hr class="divider"/>
+    <details>
+      <summary>Or paste keywords manually</summary>
+      <div class="field">
+        <label for="kwPasteArea">One keyword per line (optionally "keyword, position, volume")</label>
+        <textarea id="kwPasteArea" style="min-height:90px; width:100%; font-family:var(--mono); font-size:12px; padding:10px 12px; border:1px solid var(--paper-line);" placeholder="graphic designer red deer, 4, 90&#10;logo design near me"></textarea>
+      </div>
+      <button class="btn-secondary" id="kwPasteBtn" type="button">Add pasted keywords to the list below</button>
+    </details>
+
+    <div class="comp-wrap" id="kwResultsWrap" style="display:none; margin-top:18px;">
+      <h4 id="kwResultsHeading">Keywords found</h4>
+      <div class="preview-actions" style="margin-bottom:8px;">
+        <button class="chip-btn" id="kwSelectAllBtn" type="button">Select all</button>
+        <button class="chip-btn" id="kwSelectNoneBtn" type="button">Select none</button>
+      </div>
+      <table class="comp">
+        <thead>
+          <tr><th></th><th>Keyword</th><th class="num">Position</th><th class="num">Monthly volume</th><th>Ranking URL</th></tr>
+        </thead>
+        <tbody id="kwResultsBody"></tbody>
+      </table>
+      <button class="go" id="kwSendBtn" style="margin-top:12px;">Send selected keywords to Grid Rank Tracker →</button>
+      <div class="hint" style="margin-top:6px;">Creates (or reuses) a client in the Grid Rank Tracker using the business info above, adds the selected keywords to it, geocodes the location you entered as the grid centre, and switches you to that tab so you can build or scan the grid to test them.</div>
+    </div>
+  </div>
+  </div>
     <strong>How the pin works:</strong> with coordinates set, each search URL carries an
     <code>a+</code>-type <code>uule</code> — a standard-base64 blob of a small location record
     (role, producer, provenance, a timestamp, the lat/lng in E7 fixed-point, and a radius) —
@@ -674,8 +753,10 @@ function fillRegionSelect(sel){
 }
 const regionSelect = document.getElementById('region');
 const tRegionSelect = document.getElementById('tRegion');
+const kwRegionSelect = document.getElementById('kwRegion');
 fillRegionSelect(regionSelect);
 fillRegionSelect(tRegionSelect);
+fillRegionSelect(kwRegionSelect);
 
 /* ---------- UULE encoding (standard base64: keep + / = intact) ---------- */
 function bytesToBase64(bytes){
@@ -2324,7 +2405,299 @@ function parsePastedResults(text, bizName, includeAds){
   };
 }
 
-/* ---------- Export / import ---------- */
+/* =========================================================================
+   TAB 3: KEYWORD FINDER
+   "What is this website ranking for, and where?" — pulls DataForSEO Labs'
+   ranked-keywords data for a domain in a given location, with a free manual
+   paste fallback, then can push selected keywords straight into the Grid
+   Rank Tracker as a client + keyword list ready to build/scan.
+   ========================================================================= */
+let kwResults = []; // { keyword, position, volume, url, selected, source }
+
+function cleanDomain(raw){
+  return (raw || '').trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/\/.*$/, '')
+    .toLowerCase();
+}
+
+const kwStatusEl = document.getElementById('kwStatus');
+function setKwStatus(msg, kind){
+  kwStatusEl.textContent = msg;
+  kwStatusEl.className = 'scan-status' + (kind ? ' ' + kind : '');
+}
+
+/* DataForSEO Labs — Ranked Keywords (separate product line from the live
+   SERP calls used by the Grid Rank Tracker; same Basic Auth credentials). */
+async function dfsRankedKeywords(domain, locationName, languageCode){
+  const login = (state.settings.dfsLogin || '').trim();
+  const pass  = (state.settings.dfsPassword || '').trim();
+  if (!login || !pass){
+    const e = new Error('DataForSEO credentials are missing — add them in the Grid Rank Tracker tab first.');
+    e.fatal = true; throw e;
+  }
+  const url = (state.settings.proxyPrefix || '').trim() +
+    'https://api.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live';
+  const task = {
+    target: domain,
+    location_name: locationName,
+    language_code: languageCode,
+    limit: 300,
+    load_rank_absolute: true,
+    order_by: ['ranked_serp_element.serp_item.rank_absolute,asc']
+  };
+  let res;
+  try{
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + btoa(login + ':' + pass),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify([task])
+    });
+  } catch (networkErr){
+    const e = new Error('request blocked (network/CORS). Set a CORS proxy prefix in the Grid Rank Tracker\u2019s Connection settings.');
+    e.fatal = true; throw e;
+  }
+  if (res.status === 401 || res.status === 403){
+    const e = new Error('DataForSEO rejected the credentials (' + res.status + ').');
+    e.fatal = true; throw e;
+  }
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (data.status_code && data.status_code !== 20000){
+    throw new Error('DataForSEO error ' + data.status_code + ': ' + (data.status_message || ''));
+  }
+  const t = (data.tasks || [])[0];
+  if (t && t.status_code && t.status_code !== 20000){
+    throw new Error('DataForSEO task error ' + t.status_code + ': ' + (t.status_message || ''));
+  }
+  const result = ((t || {}).result || [])[0] || {};
+  const items = result.items || [];
+  return items.map(it => {
+    const kd = it.keyword_data || {};
+    const info = kd.keyword_info || {};
+    const serp = (it.ranked_serp_element || {}).serp_item || {};
+    return {
+      keyword: kd.keyword || '',
+      position: serp.rank_absolute || serp.rank_group || null,
+      volume: (info.search_volume != null) ? info.search_volume : null,
+      url: serp.url || ''
+    };
+  }).filter(x => x.keyword);
+}
+
+function mergeKwResults(newItems, source){
+  newItems.forEach(item => {
+    const key = item.keyword.trim().toLowerCase();
+    if (!key) return;
+    const existing = kwResults.find(r => r.keyword.trim().toLowerCase() === key);
+    if (existing){
+      if (item.position != null) existing.position = item.position;
+      if (item.volume != null) existing.volume = item.volume;
+      if (item.url) existing.url = item.url;
+    } else {
+      kwResults.push({
+        keyword: item.keyword, position: item.position, volume: item.volume,
+        url: item.url || '', selected: true, source
+      });
+    }
+  });
+}
+
+function renderKwResults(){
+  const wrap = document.getElementById('kwResultsWrap');
+  const body = document.getElementById('kwResultsBody');
+  const heading = document.getElementById('kwResultsHeading');
+  if (!kwResults.length){ wrap.style.display = 'none'; return; }
+
+  const minVol = parseInt(document.getElementById('kwMinVolume').value, 10) || 0;
+  const maxPos = parseInt(document.getElementById('kwMaxPosition').value, 10) || Infinity;
+  const visible = kwResults.filter(r =>
+    (r.volume == null || r.volume >= minVol) && (r.position == null || r.position <= maxPos));
+
+  heading.textContent = 'Keywords found (' + visible.length + ' of ' + kwResults.length + ' shown' +
+    (minVol || isFinite(maxPos) ? ' — filtered' : '') + ')';
+  body.innerHTML = '';
+  visible.forEach(r => {
+    const tr = document.createElement('tr');
+    const tdCheck = document.createElement('td');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = !!r.selected;
+    cb.addEventListener('change', () => { r.selected = cb.checked; });
+    tdCheck.appendChild(cb);
+    tr.appendChild(tdCheck);
+
+    const tdKw = document.createElement('td');
+    tdKw.textContent = r.keyword;
+    tr.appendChild(tdKw);
+
+    const tdPos = document.createElement('td');
+    tdPos.className = 'num';
+    tdPos.textContent = r.position != null ? r.position : '—';
+    tr.appendChild(tdPos);
+
+    const tdVol = document.createElement('td');
+    tdVol.className = 'num';
+    tdVol.textContent = r.volume != null ? r.volume : '—';
+    tr.appendChild(tdVol);
+
+    const tdUrl = document.createElement('td');
+    if (r.url){
+      const a = document.createElement('a');
+      a.href = r.url; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = r.url.length > 40 ? r.url.slice(0, 37) + '…' : r.url;
+      tdUrl.appendChild(a);
+    } else {
+      tdUrl.textContent = '—';
+    }
+    tr.appendChild(tdUrl);
+
+    body.appendChild(tr);
+  });
+  wrap.style.display = 'block';
+}
+
+document.getElementById('kwFindBtn').addEventListener('click', async () => {
+  const domain = cleanDomain(document.getElementById('kwSiteUrl').value);
+  const locationName = document.getElementById('kwLocationName').value.trim();
+  const region = REGIONS[kwRegionSelect.value] || REGIONS[0];
+  if (!domain){ setKwStatus('Enter a website first.', 'err'); return; }
+  if (!locationName){ setKwStatus('Enter a location — this is the area the keywords are scoped to.', 'err'); return; }
+  const btn = document.getElementById('kwFindBtn');
+  btn.disabled = true;
+  setKwStatus('Looking up ranked keywords for ' + domain + ' in ' + locationName + '…', '');
+  try{
+    const items = await dfsRankedKeywords(domain, locationName, region.hl);
+    if (!items.length){
+      setKwStatus('DataForSEO returned no ranked keywords for that domain/location — double-check the domain and location spelling.', 'err');
+    } else {
+      mergeKwResults(items, 'api');
+      renderKwResults();
+      setKwStatus('Found ' + items.length + ' ranked keyword(s) ✓ — adjust the filters above or scroll down to select which ones to test.', 'ok');
+    }
+  } catch (err){
+    setKwStatus('Lookup failed: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('kwMinVolume').addEventListener('input', renderKwResults);
+document.getElementById('kwMaxPosition').addEventListener('input', renderKwResults);
+
+document.getElementById('kwPasteBtn').addEventListener('click', () => {
+  const raw = document.getElementById('kwPasteArea').value;
+  const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  if (!lines.length){ setKwStatus('Paste one keyword per line first.', 'err'); return; }
+  const items = lines.map(line => {
+    const parts = line.split(',').map(s => s.trim());
+    return {
+      keyword: parts[0] || '',
+      position: parts[1] && /^\d+$/.test(parts[1]) ? parseInt(parts[1], 10) : null,
+      volume: parts[2] && /^\d+$/.test(parts[2]) ? parseInt(parts[2], 10) : null,
+      url: ''
+    };
+  }).filter(x => x.keyword);
+  mergeKwResults(items, 'manual');
+  renderKwResults();
+  document.getElementById('kwPasteArea').value = '';
+  setKwStatus('Added ' + items.length + ' pasted keyword(s) to the list below ✓', 'ok');
+});
+
+document.getElementById('kwSelectAllBtn').addEventListener('click', () => {
+  kwResults.forEach(r => r.selected = true); renderKwResults();
+});
+document.getElementById('kwSelectNoneBtn').addEventListener('click', () => {
+  kwResults.forEach(r => r.selected = false); renderKwResults();
+});
+
+/* GBP link on the Keyword Finder tab auto-fills the business name the same
+   way the Grid Rank Tracker's does, so the two stay consistent when a
+   client is created from here. */
+document.getElementById('kwGbpLink').addEventListener('input', () => {
+  const v = document.getElementById('kwGbpLink').value.trim();
+  const m = v.match(/\/maps\/place\/([^\/@?]+)/);
+  const nameField = document.getElementById('kwBizName');
+  if (m && !nameField.value.trim()){
+    try{ nameField.value = decodeURIComponent(m[1]).replace(/\+/g, ' '); } catch(e){}
+  }
+});
+
+document.getElementById('kwSendBtn').addEventListener('click', async () => {
+  const selected = kwResults.filter(r => r.selected && r.keyword.trim());
+  if (!selected.length){ setKwStatus('Select at least one keyword to send.', 'err'); return; }
+  const bizName = document.getElementById('kwBizName').value.trim();
+  const gbpLink = document.getElementById('kwGbpLink').value.trim();
+  const phone = document.getElementById('kwBizPhone').value.trim();
+  const domain = cleanDomain(document.getElementById('kwSiteUrl').value);
+  const locationName = document.getElementById('kwLocationName').value.trim();
+  if (!bizName){ setKwStatus('Enter the business name — the Grid Rank Tracker needs it to identify matches.', 'err'); return; }
+
+  const sendBtn = document.getElementById('kwSendBtn');
+  sendBtn.disabled = true;
+  setKwStatus('Setting up “' + bizName + '” in the Grid Rank Tracker…', '');
+
+  // Reuse an existing client with the same name, or create a new one.
+  let c = state.clients.find(x => normName(x.name) === normName(bizName));
+  if (!c){
+    c = {
+      id: uid(), name: bizName,
+      gbpLink: '', bizName: '', phone: '', cid: null,
+      center: { lat: null, lng: null, label: '' },
+      regionIdx: 0, gridSize: 7, spacingKm: 1.5, surface: 'local',
+      keywords: [], activeKeywordId: null
+    };
+    state.clients.push(c);
+  }
+  if (gbpLink){
+    c.gbpLink = gbpLink;
+    const cidM = gbpLink.match(/[?&](?:cid|ludocid)=(\d+)/);
+    if (cidM) c.cid = cidM[1];
+  }
+  c.bizName = bizName;
+  if (phone) c.phone = phone;
+  c.regionIdx = parseInt(kwRegionSelect.value, 10) || 0;
+  state.activeClientId = c.id;
+
+  // Try to geocode the location for the grid centre, if it isn't set yet.
+  if (c.center.lat == null || c.center.lng == null){
+    try{
+      const hit = await nominatim(locationName || domain);
+      if (hit){
+        c.center.lat = parseFloat(hit.lat);
+        c.center.lng = parseFloat(hit.lon);
+        c.center.label = hit.display_name;
+      }
+    } catch (e){ /* geocoding is best-effort here; the tracker tab can retry it */ }
+  }
+
+  let added = 0;
+  selected.forEach(r => {
+    const text = r.keyword.trim();
+    if (!text) return;
+    if (!c.keywords.some(k => k.text.toLowerCase() === text.toLowerCase())){
+      const kw = { id: uid(), text, scans: [] };
+      c.keywords.push(kw);
+      c.activeKeywordId = kw.id;
+      added++;
+    }
+  });
+
+  saveState();
+  renderClients(); // repopulates the tracker tab's fields for this client
+
+  sendBtn.disabled = false;
+  setKwStatus('Sent ' + added + ' new keyword(s) to “' + bizName + '” in the Grid Rank Tracker ✓ — switching tabs…', 'ok');
+
+  setTimeout(() => {
+    document.querySelector('.tab[data-tab="tracker"]').click();
+  }, 400);
+});
+
+
 document.getElementById('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
