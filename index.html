@@ -252,7 +252,7 @@
 <div class="sheet">
   <div class="eyebrow">Meridian · Local SERP checker &amp; grid rank tracker</div>
   <h1>See Google from anywhere,<br/>without leaving your desk.</h1>
-  <p class="sub">One-off checks build a pinned Google URL with <code>uule</code>/<code>hl</code>/<code>gl</code>. The Grid Tracker scatters those pinned searches across a map around a Google Business Profile: open a dot's search, copy the page, paste it back — the platform reads the results, finds your listing, ranks every point, and tells you how the profile is really doing in the area.</p>
+  <p class="sub">One-off checks build a pinned Google URL with <code>uule</code>/<code>hl</code>/<code>gl</code>. The Grid Tracker scatters searches across a map around a Google Business Profile and ranks every point — fully automatically through a SERP data API, or free via copy-paste — then tells you how the profile is really doing in the area.</p>
 
   <div class="tabs">
     <button class="tab active" data-tab="checker">SERP Checker</button>
@@ -440,7 +440,26 @@
           <div class="hint">Saved per client. Click a keyword to make it the active one; scans and history attach to it.</div>
         </div>
 
-        <button class="go" id="buildBtn">Build grid for active keyword →</button>
+        <div class="field" style="margin-top:4px;">
+          <label for="apiKey">Serper.dev API key — powers automatic scanning</label>
+          <input id="apiKey" type="password" placeholder="paste your key from serper.dev" autocomplete="off"/>
+          <div class="hint">Browsers forbid a page from fetching Google itself, so automatic mode uses the
+            <a href="https://serper.dev" target="_blank" rel="noopener" style="color:var(--brass-dark)">Serper.dev</a>
+            data API (free trial credits on signup; each grid point = 1 credit).
+            The key is stored only in this browser. No key? Manual paste mode below is free.</div>
+        </div>
+        <details>
+          <summary>Connection settings</summary>
+          <div class="field">
+            <label for="proxyPrefix">CORS proxy prefix (only if direct API calls are blocked)</label>
+            <input id="proxyPrefix" type="text" placeholder="https://your-proxy.example.com/" autocomplete="off"/>
+            <div class="hint">If an automatic scan fails instantly with a network/CORS error, requests are being blocked by the browser. Put a CORS proxy URL here; it gets prepended to the API endpoint.</div>
+          </div>
+        </details>
+
+        <button class="go" id="autoScanBtn">Scan grid automatically →</button>
+        <button class="btn-secondary" id="stopAutoBtn" type="button" style="width:100%; margin-top:8px;" disabled>Stop automatic scan</button>
+        <button class="btn-secondary" id="buildBtn" type="button" style="width:100%; margin-top:8px;">Build grid for manual paste mode</button>
         <div class="scan-status" id="scanStatus"></div>
 
         <div class="field" style="margin-top:18px;">
@@ -519,13 +538,15 @@
     to the exact page it came from.
   </p>
   <p class="note">
-    <strong>How the scanner works:</strong> a web page can't fetch Google's results itself
-    (browsers block cross-site reads), so the fetch is your copy — the analysis is the platform's.
-    Open a dot's search, select all, copy, paste it back: the parser walks the pasted text,
-    detects each listing by its name + rating pattern, skips anything under a “Sponsored” label,
-    finds your business (fuzzy-matched, so truncated names like “EDGE Marketing &amp; Design I…”
-    still count), records the position, and moves you to the next point. The same paste works
-    from the Places tab, the local finder, or the Google Maps side panel.
+    <strong>How scanning works:</strong> browsers forbid a web page from fetching Google's pages
+    itself — a hard security rule, with no exception. So automatic mode does what every grid
+    tracker does behind the scenes: each point is sent to a SERP data API (Serper.dev), which
+    queries Google server-side at that exact coordinate and returns the ranked places as JSON;
+    the platform matches your business (by CID when the GBP link carries one, otherwise by name)
+    and colors the dot. One point = one API credit. No key? Manual mode is free: open a dot's
+    pinned search, Ctrl+A · Ctrl+C, paste it back — the built-in parser reads the listings,
+    skips sponsored results, and ranks the dot the same way. Every dot's popup keeps the exact
+    <code>uule</code> URL so any number can be verified against the live page.
   </p>
   <div class="footer-links">
     <a href="https://developers.google.com/web/tools/chrome-devtools/device-mode/device-input-and-sensors" target="_blank" rel="noopener">Chrome DevTools “Sensors” location override</a> ·
@@ -789,9 +810,13 @@ let memoryStore = null;
 function loadState(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw){
+      const s = JSON.parse(raw);
+      if (!s.settings) s.settings = { serperKey:'', proxyPrefix:'' };
+      return s;
+    }
   } catch(e){ /* private mode / sandbox: fall through */ }
-  return memoryStore || { clients: [], activeClientId: null };
+  return memoryStore || { clients: [], activeClientId: null, settings: { serperKey:'', proxyPrefix:'' } };
 }
 function saveState(){
   memoryStore = state;
@@ -831,9 +856,26 @@ gbpLinkInput.addEventListener('input', () => {
     document.getElementById('tLat').value = coord[1];
     document.getElementById('tLng').value = coord[2];
   }
+  const c = activeClient();
+  if (c){
+    const cidM = v.match(/[?&](?:cid|ludocid)=(\d+)/);
+    c.cid = cidM ? cidM[1] : (c.cid || null);
+  }
   persistClientFields();
 });
 bizNameInput.addEventListener('input', persistClientFields);
+
+/* ---------- Settings (API key / proxy) ---------- */
+const apiKeyInput = document.getElementById('apiKey');
+const proxyPrefixInput = document.getElementById('proxyPrefix');
+apiKeyInput.value = state.settings.serperKey || '';
+proxyPrefixInput.value = state.settings.proxyPrefix || '';
+apiKeyInput.addEventListener('input', () => {
+  state.settings.serperKey = apiKeyInput.value.trim(); saveState();
+});
+proxyPrefixInput.addEventListener('input', () => {
+  state.settings.proxyPrefix = proxyPrefixInput.value.trim(); saveState();
+});
 
 /* ---------- Client management ---------- */
 const clientSelect = document.getElementById('clientSelect');
@@ -858,7 +900,7 @@ document.getElementById('addClientBtn').addEventListener('click', () => {
   if (!name) return;
   const c = {
     id: uid(), name,
-    gbpLink:'', bizName:'',
+    gbpLink:'', bizName:'', cid:null,
     center:{ lat:null, lng:null, label:'' },
     regionIdx: 0, gridSize: 7, spacingKm: 1.5, surface: 'local',
     keywords: [], activeKeywordId: null
@@ -1338,22 +1380,24 @@ historySelect.addEventListener('change', () => {
   if (!isNaN(idx) && kw.scans[idx]) drawScan(kw.scans[idx]);
 });
 
-/* ---------- Build grid ---------- */
+/* ---------- Build grid (shared by automatic & manual modes) ---------- */
 const scanStatus = document.getElementById('scanStatus');
 function setScanStatus(msg, kind){
   scanStatus.textContent = msg;
   scanStatus.className = 'scan-status' + (kind ? ' ' + kind : '');
 }
-document.getElementById('buildBtn').addEventListener('click', () => {
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+function createScan(){
   const c = activeClient();
   const kw = activeKeyword();
-  if (!c){ setScanStatus('Add and select a client first.', 'err'); return; }
-  if (!kw){ setScanStatus('Save a keyword and click it to make it active.', 'err'); return; }
+  if (!c){ setScanStatus('Add and select a client first.', 'err'); return null; }
+  if (!kw){ setScanStatus('Save a keyword and click it to make it active.', 'err'); return null; }
   if (c.center.lat == null || c.center.lng == null){
-    setScanStatus('Set the grid centre (geocode the address or enter lat/lng).', 'err'); return;
+    setScanStatus('Set the grid centre (geocode the address or enter lat/lng).', 'err'); return null;
   }
   if (!c.bizName){
-    setScanStatus('Enter the business name — the scanner matches against it.', 'err'); return;
+    setScanStatus('Enter the business name — the scanner matches against it.', 'err'); return null;
   }
   persistClientFields();
 
@@ -1374,11 +1418,143 @@ document.getElementById('buildBtn').addEventListener('click', () => {
   kw.scans.push(scan);
   saveState(); renderHistory(); renderKeywords();
   drawScan(scan);
-  setScanStatus('Grid built — ' + pts.length + ' points. The scan loop is next to the map.', 'ok');
+  return scan;
+}
+
+document.getElementById('buildBtn').addEventListener('click', () => {
+  const scan = createScan();
+  if (!scan) return;
+  setScanStatus('Grid built in manual mode — ' + scan.points.length + ' points. The paste loop is next to the map.', 'ok');
   setTimeout(() => {
     assistPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 100);
 });
+
+/* ---------- Automatic scanning via the Serper.dev data API ----------
+   Browsers block a page from fetching Google directly, so automatic mode
+   sends each grid point to Serper.dev, which fetches Google server-side
+   and returns the ranked places as JSON. 1 point = 1 API credit.        */
+const autoScanBtn = document.getElementById('autoScanBtn');
+const stopAutoBtn = document.getElementById('stopAutoBtn');
+let autoRunning = false;
+let autoStop = false;
+
+autoScanBtn.addEventListener('click', async () => {
+  const key = (state.settings.serperKey || '').trim();
+  if (!key){
+    setScanStatus('Automatic mode needs a Serper.dev API key — sign up at serper.dev (free trial credits) and paste the key above. Or use manual paste mode below for free.', 'err');
+    document.getElementById('apiKey').focus();
+    return;
+  }
+  const scan = createScan();
+  if (!scan) return;
+  await runAutoScan(scan);
+});
+stopAutoBtn.addEventListener('click', () => { autoStop = true; });
+
+async function runAutoScan(scan){
+  const c = activeClient();
+  const kw = activeKeyword();
+  const region = REGIONS[c.regionIdx] || REGIONS[0];
+  autoRunning = true; autoStop = false;
+  autoScanBtn.disabled = true; stopAutoBtn.disabled = false;
+
+  const total = scan.points.length;
+  for (let i = 0; i < total; i++){
+    if (autoStop){
+      setScanStatus('Stopped at point ' + i + '/' + total + ' — results so far are saved. Remaining dots can be pasted manually or re-run.', '');
+      break;
+    }
+    const p = scan.points[i];
+    const el = document.getElementById('dot-' + i);
+    if (el) el.textContent = '…';
+    setScanStatus('Scanning point ' + (i + 1) + '/' + total + '…', '');
+    try{
+      const data = await serperQuery(kw.text, p, region, c.surface);
+      applyListings(p, normalizeSerper(data), c);
+    } catch (err){
+      if (err.fatal){
+        setScanStatus('Scan aborted at point ' + (i + 1) + ': ' + err.message, 'err');
+        break;
+      }
+      setScanStatus('Point ' + (i + 1) + ' failed (' + err.message + ') — continuing.', 'err');
+    }
+    refreshDot(i);
+    updateSummary(scan); renderVerdict(scan); saveState();
+    await sleep(350);
+  }
+
+  autoRunning = false;
+  autoScanBtn.disabled = false; stopAutoBtn.disabled = true;
+  renderHistory();
+  currentIdx = nextUnscanned(scan, 0);
+  updateAssistPanel();
+  const done = scan.points.filter(p => p.rank != null).length;
+  if (!autoStop){
+    setScanStatus(done === total
+      ? 'Automatic scan complete ✓ — ' + total + ' points ranked.'
+      : done + '/' + total + ' points ranked; failed ones can be re-run or pasted manually.',
+      done === total ? 'ok' : '');
+  }
+}
+
+async function serperQuery(keyword, p, region, surface){
+  const key = (state.settings.serperKey || '').trim();
+  const endpoint = surface === 'web'
+    ? 'https://google.serper.dev/search'
+    : 'https://google.serper.dev/places';
+  const url = (state.settings.proxyPrefix || '').trim() + endpoint;
+  const body = {
+    q: keyword,
+    ll: '@' + p.lat.toFixed(7) + ',' + p.lng.toFixed(7) + ',15z',
+    gl: (region.gl || 'us').toLowerCase(),
+    hl: region.hl || 'en',
+    num: 20
+  };
+  let res;
+  try{
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch (networkErr){
+    const e = new Error('request blocked (network/CORS). Open “Connection settings” and set a CORS proxy prefix.');
+    e.fatal = true; throw e;
+  }
+  if (res.status === 401 || res.status === 403){
+    const e = new Error('API key rejected (' + res.status + ') — check it at serper.dev.');
+    e.fatal = true; throw e;
+  }
+  if (res.status === 429){
+    const e = new Error('rate limited or out of credits (429).');
+    e.fatal = true; throw e;
+  }
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+function normalizeSerper(data){
+  const places = (data.places || data.local || []).map(x => ({
+    title: x.title || x.name || '', cid: x.cid || null
+  })).filter(x => x.title);
+  if (places.length) return places;
+  return (data.organic || []).map(x => ({ title: x.title || '', cid: null })).filter(x => x.title);
+}
+
+function applyListings(p, listings, c){
+  p.names = listings.map(l => l.title).slice(0, 20);
+  p.rank = 0; p.matched = null; p.adRank = null;
+  for (let i = 0; i < listings.length; i++){
+    const l = listings[i];
+    const cidHit = c.cid && l.cid && String(l.cid) === String(c.cid);
+    if (cidHit || nameMatches(l.title, c.bizName)){
+      p.rank = i + 1;
+      p.matched = l.title;
+      break;
+    }
+  }
+}
 
 /* ---------- Assisted paste-scan ---------- */
 const assistPanel = document.getElementById('assistPanel');
