@@ -441,12 +441,30 @@
         </div>
 
         <div class="field" style="margin-top:4px;">
-          <label for="apiKey">Serper.dev API key — powers automatic scanning</label>
-          <input id="apiKey" type="password" placeholder="paste your key from serper.dev" autocomplete="off"/>
-          <div class="hint">Browsers forbid a page from fetching Google itself, so automatic mode uses the
-            <a href="https://serper.dev" target="_blank" rel="noopener" style="color:var(--brass-dark)">Serper.dev</a>
-            data API (free trial credits on signup; each grid point = 1 credit).
-            The key is stored only in this browser. No key? Manual paste mode below is free.</div>
+          <label for="provider">Automatic scanning — data provider</label>
+          <select id="provider">
+            <option value="dataforseo">DataForSEO</option>
+            <option value="serper">Serper.dev</option>
+          </select>
+          <div class="hint">Browsers forbid a page from fetching Google itself, so automatic mode routes each grid point through a SERP data API that queries Google server-side. Credentials are stored only in this browser. No account? Manual paste mode below is free.</div>
+        </div>
+        <div id="dfsFields">
+          <div class="field">
+            <label for="dfsLogin">DataForSEO API login (your account email)</label>
+            <input id="dfsLogin" type="text" placeholder="you@example.com" autocomplete="off"/>
+          </div>
+          <div class="field">
+            <label for="dfsPassword">DataForSEO API password</label>
+            <input id="dfsPassword" type="password" placeholder="from app.dataforseo.com → API Access" autocomplete="off"/>
+            <div class="hint">DataForSEO uses Basic Auth: login + API password together. Live SERP requests are priced per call — check the cost per request in your dashboard before running big grids.</div>
+          </div>
+        </div>
+        <div id="serperFields" style="display:none;">
+          <div class="field">
+            <label for="apiKey">Serper.dev API key</label>
+            <input id="apiKey" type="password" placeholder="paste your key from serper.dev" autocomplete="off"/>
+            <div class="hint">Free trial credits on signup; each grid point = 1 credit.</div>
+          </div>
         </div>
         <details>
           <summary>Connection settings</summary>
@@ -807,16 +825,17 @@ document.getElementById('q').addEventListener('keydown', e => {
 /* ---------- Persistence (localStorage with in-memory fallback) ---------- */
 const STORE_KEY = 'meridian-grid-tracker-v1';
 let memoryStore = null;
+const DEFAULT_SETTINGS = { provider:'dataforseo', serperKey:'', dfsLogin:'', dfsPassword:'', proxyPrefix:'' };
 function loadState(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if (raw){
       const s = JSON.parse(raw);
-      if (!s.settings) s.settings = { serperKey:'', proxyPrefix:'' };
+      s.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings || {});
       return s;
     }
   } catch(e){ /* private mode / sandbox: fall through */ }
-  return memoryStore || { clients: [], activeClientId: null, settings: { serperKey:'', proxyPrefix:'' } };
+  return memoryStore || { clients: [], activeClientId: null, settings: Object.assign({}, DEFAULT_SETTINGS) };
 }
 function saveState(){
   memoryStore = state;
@@ -865,13 +884,36 @@ gbpLinkInput.addEventListener('input', () => {
 });
 bizNameInput.addEventListener('input', persistClientFields);
 
-/* ---------- Settings (API key / proxy) ---------- */
+/* ---------- Settings (provider / credentials / proxy) ---------- */
+const providerSelect = document.getElementById('provider');
 const apiKeyInput = document.getElementById('apiKey');
+const dfsLoginInput = document.getElementById('dfsLogin');
+const dfsPasswordInput = document.getElementById('dfsPassword');
 const proxyPrefixInput = document.getElementById('proxyPrefix');
+
+providerSelect.value = state.settings.provider || 'dataforseo';
 apiKeyInput.value = state.settings.serperKey || '';
+dfsLoginInput.value = state.settings.dfsLogin || '';
+dfsPasswordInput.value = state.settings.dfsPassword || '';
 proxyPrefixInput.value = state.settings.proxyPrefix || '';
+
+function toggleProviderFields(){
+  const p = providerSelect.value;
+  document.getElementById('dfsFields').style.display = p === 'dataforseo' ? 'block' : 'none';
+  document.getElementById('serperFields').style.display = p === 'serper' ? 'block' : 'none';
+}
+toggleProviderFields();
+providerSelect.addEventListener('change', () => {
+  state.settings.provider = providerSelect.value; saveState(); toggleProviderFields();
+});
 apiKeyInput.addEventListener('input', () => {
   state.settings.serperKey = apiKeyInput.value.trim(); saveState();
+});
+dfsLoginInput.addEventListener('input', () => {
+  state.settings.dfsLogin = dfsLoginInput.value.trim(); saveState();
+});
+dfsPasswordInput.addEventListener('input', () => {
+  state.settings.dfsPassword = dfsPasswordInput.value.trim(); saveState();
 });
 proxyPrefixInput.addEventListener('input', () => {
   state.settings.proxyPrefix = proxyPrefixInput.value.trim(); saveState();
@@ -1440,11 +1482,19 @@ let autoRunning = false;
 let autoStop = false;
 
 autoScanBtn.addEventListener('click', async () => {
-  const key = (state.settings.serperKey || '').trim();
-  if (!key){
-    setScanStatus('Automatic mode needs a Serper.dev API key — sign up at serper.dev (free trial credits) and paste the key above. Or use manual paste mode below for free.', 'err');
-    document.getElementById('apiKey').focus();
-    return;
+  const prov = state.settings.provider || 'dataforseo';
+  if (prov === 'serper'){
+    if (!(state.settings.serperKey || '').trim()){
+      setScanStatus('Serper mode needs an API key — sign up at serper.dev and paste the key above. Or use manual paste mode below for free.', 'err');
+      apiKeyInput.focus();
+      return;
+    }
+  } else {
+    if (!(state.settings.dfsLogin || '').trim() || !(state.settings.dfsPassword || '').trim()){
+      setScanStatus('DataForSEO needs BOTH fields: API login (your account email) AND the API password — find them at app.dataforseo.com → API Access.', 'err');
+      (!(state.settings.dfsLogin || '').trim() ? dfsLoginInput : dfsPasswordInput).focus();
+      return;
+    }
   }
   const scan = createScan();
   if (!scan) return;
@@ -1470,8 +1520,8 @@ async function runAutoScan(scan){
     if (el) el.textContent = '…';
     setScanStatus('Scanning point ' + (i + 1) + '/' + total + '…', '');
     try{
-      const data = await serperQuery(kw.text, p, region, c.surface);
-      applyListings(p, normalizeSerper(data), c);
+      const listings = await providerQuery(kw.text, p, region, c.surface);
+      applyListings(p, listings, c);
     } catch (err){
       if (err.fatal){
         setScanStatus('Scan aborted at point ' + (i + 1) + ': ' + err.message, 'err');
@@ -1496,6 +1546,12 @@ async function runAutoScan(scan){
       : done + '/' + total + ' points ranked; failed ones can be re-run or pasted manually.',
       done === total ? 'ok' : '');
   }
+}
+
+function providerQuery(keyword, p, region, surface){
+  return (state.settings.provider === 'serper')
+    ? serperQuery(keyword, p, region, surface).then(normalizeSerper)
+    : dataForSeoQuery(keyword, p, region, surface).then(d => normalizeDataForSeo(d, surface));
 }
 
 async function serperQuery(keyword, p, region, surface){
@@ -1540,6 +1596,75 @@ function normalizeSerper(data){
   })).filter(x => x.title);
   if (places.length) return places;
   return (data.organic || []).map(x => ({ title: x.title || '', cid: null })).filter(x => x.title);
+}
+
+/* ---- DataForSEO (Basic Auth: API login + API password) ----
+   Local finder surface -> /v3/serp/google/maps/live/advanced
+   Web SERP surface     -> /v3/serp/google/organic/live/advanced
+   Both accept location_coordinate for exact-point searches.   */
+async function dataForSeoQuery(keyword, p, region, surface){
+  const login = (state.settings.dfsLogin || '').trim();
+  const pass  = (state.settings.dfsPassword || '').trim();
+  const endpoint = surface === 'web'
+    ? 'https://api.dataforseo.com/v3/serp/google/organic/live/advanced'
+    : 'https://api.dataforseo.com/v3/serp/google/maps/live/advanced';
+  const url = (state.settings.proxyPrefix || '').trim() + endpoint;
+  const lang = (region.hl || 'en').split('-')[0];
+  const coord = p.lat.toFixed(7) + ',' + p.lng.toFixed(7);
+  const task = surface === 'web'
+    ? { keyword, location_coordinate: coord, language_code: lang, device: 'desktop', depth: 20 }
+    : { keyword, location_coordinate: coord + ',15z', language_code: lang, depth: 20 };
+
+  let res;
+  try{
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + btoa(login + ':' + pass),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify([task])
+    });
+  } catch (networkErr){
+    const e = new Error('request blocked (network/CORS). Open “Connection settings” and set a CORS proxy prefix.');
+    e.fatal = true; throw e;
+  }
+  if (res.status === 401 || res.status === 403){
+    const e = new Error('DataForSEO rejected the credentials (' + res.status + ') — the login is your account email, the password is the API password from app.dataforseo.com → API Access.');
+    e.fatal = true; throw e;
+  }
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+
+  // DataForSEO wraps errors in status codes inside a 200 response.
+  if (data.status_code && data.status_code !== 20000){
+    const e = new Error('DataForSEO error ' + data.status_code + ': ' + (data.status_message || ''));
+    e.fatal = (data.status_code === 40101 || data.status_code === 40200 || data.status_code === 40201 || data.status_code === 40202);
+    throw e;
+  }
+  const t = (data.tasks || [])[0];
+  if (t && t.status_code && t.status_code !== 20000){
+    const e = new Error('DataForSEO task error ' + t.status_code + ': ' + (t.status_message || ''));
+    e.fatal = (String(t.status_code).startsWith('401') || String(t.status_code).startsWith('402'));
+    throw e;
+  }
+  return data;
+}
+
+function normalizeDataForSeo(data, surface){
+  const result = ((((data.tasks || [])[0] || {}).result || [])[0]) || {};
+  const items = result.items || [];
+  if (surface === 'web'){
+    // Prefer the local pack; fall back to organic titles.
+    const pack = items.filter(it => it.type === 'local_pack')
+      .map(it => ({ title: it.title || '', cid: it.cid || null })).filter(x => x.title);
+    if (pack.length) return pack;
+    return items.filter(it => it.type === 'organic')
+      .map(it => ({ title: it.title || '', cid: null })).filter(x => x.title);
+  }
+  // Maps surface: ranked places, excluding paid items.
+  return items.filter(it => it.type === 'maps_search')
+    .map(it => ({ title: it.title || '', cid: it.cid || null })).filter(x => x.title);
 }
 
 function applyListings(p, listings, c){
