@@ -229,6 +229,7 @@
   .rank-dot.lost{background:var(--rank-lost);}
   .rank-dot.none{background:var(--rank-none);}
   .rank-dot.current{outline:3px solid var(--brass); outline-offset:1px;}
+  .rank-dot.unsure{border-style:dashed;}
   .leaflet-popup-content{font-family:var(--mono); font-size:12px; line-height:1.7;}
   .leaflet-popup-content a{color:var(--brass-dark);}
   .leaflet-popup-content input.mini{
@@ -236,6 +237,14 @@
     border:1px solid var(--paper-line);
   }
   .pop-title{font-family:var(--serif); font-size:14px; margin-bottom:2px;}
+  .conf-tag{
+    display:inline-block; font-size:10px; letter-spacing:.04em; padding:1px 6px;
+    border-radius:1px; margin-left:6px; vertical-align:middle; color:#fff;
+  }
+  .conf-tag.cid{background:var(--pine);}
+  .conf-tag.phone{background:var(--pine);}
+  .conf-tag.exact{background:var(--brass-dark);}
+  .conf-tag.fuzzy{background:var(--rank-mid);}
 
   @media (max-width:900px){
     .tracker{grid-template-columns:1fr;}
@@ -371,12 +380,17 @@
         <div class="field">
           <label for="gbpLink">GBP share link</label>
           <input id="gbpLink" type="text" placeholder="https://share.google/…  or full maps URL" autocomplete="off"/>
-          <div class="hint">Paste the profile's “Share” link. Full <code>google.com/maps/place/…</code> URLs auto-fill the name below; short links (<code>share.google</code>, <code>maps.app.goo.gl</code>) are stored as-is — type the name yourself.</div>
+          <div class="hint">Paste the profile's “Share” link. Full <code>google.com/maps/place/…</code> URLs auto-fill the name below and, if the URL carries a <code>cid</code>/<code>ludocid</code>, that becomes the top-priority match signal. Short links (<code>share.google</code>, <code>maps.app.goo.gl</code>) are stored as-is — type the name and phone yourself for the same accuracy.</div>
         </div>
         <div class="field">
           <label for="bizName">Business name — exactly as shown on Google</label>
           <input id="bizName" type="text" placeholder="EDGE Marketing &amp; Design Inc." autocomplete="off"/>
-          <div class="hint">Ranks are found by matching this name in the pasted results, so spelling must match the listing.</div>
+          <div class="hint">Used as a fallback when no CID/phone match is available, so spelling should match the listing.</div>
+        </div>
+        <div class="field">
+          <label for="bizPhone">Business phone — optional, strongly improves accuracy</label>
+          <input id="bizPhone" type="text" inputmode="tel" placeholder="(403) 555-0142" autocomplete="off"/>
+          <div class="hint">When the data provider returns a phone number for a listing, an exact digit match is treated as a near-certain identification — this is what separates your profile from a same-named competitor across town.</div>
         </div>
 
         <div class="field">
@@ -485,6 +499,14 @@
             <input id="proxyPrefix" type="text" placeholder="https://your-proxy.example.com/" autocomplete="off"/>
             <div class="hint">If an automatic scan fails instantly with a network/CORS error, requests are being blocked by the browser. Put a CORS proxy URL here; it gets prepended to the API endpoint.</div>
           </div>
+          <div class="field">
+            <label for="strictMatch">Match strictness</label>
+            <select id="strictMatch">
+              <option value="loose" selected>Normal — CID/phone/exact first, fuzzy name as fallback</option>
+              <option value="strict">Strict — only accept CID, phone, or exact name matches</option>
+            </select>
+            <div class="hint">Strict mode leaves a point unmatched rather than guessing from a partial name — recommended when several similarly-named businesses compete in the same area.</div>
+          </div>
         </details>
 
         <button class="go" id="autoScanBtn">Scan grid automatically →</button>
@@ -506,6 +528,7 @@
           <span><i style="background:var(--rank-bad)"></i> 11–20</span>
           <span><i style="background:var(--rank-lost)"></i> deep (exact # shown) / 20+ not found</span>
           <span><i style="background:var(--rank-none)"></i> not scanned yet</span>
+          <span><i style="background:var(--rank-mid); border:2px dashed #fff;"></i> matched by name only — verify</span>
         </div>
         <div class="scan-status" id="mapStatus"></div>
 
@@ -570,13 +593,15 @@
   <p class="note">
     <strong>How scanning works:</strong> browsers forbid a web page from fetching Google's pages
     itself — a hard security rule, with no exception. So automatic mode does what every grid
-    tracker does behind the scenes: each point is sent to a SERP data API (Serper.dev), which
-    queries Google server-side at that exact coordinate and returns the ranked places as JSON;
-    the platform matches your business (by CID when the GBP link carries one, otherwise by name)
-    and colors the dot. One point = one API credit. No key? Manual mode is free: open a dot's
-    pinned search, Ctrl+A · Ctrl+C, paste it back — the built-in parser reads the listings,
-    skips sponsored results, and ranks the dot the same way. Every dot's popup keeps the exact
-    <code>uule</code> URL so any number can be verified against the live page.
+    tracker does behind the scenes: each point is sent to a SERP data API (DataForSEO or Serper.dev),
+    which queries Google server-side at that exact coordinate and returns the ranked places as JSON.
+    The platform then identifies your business at each point using the strongest signal available,
+    in order: <strong>CID</strong> (from the GBP link) → <strong>phone number</strong> → <strong>exact
+    name</strong> → <strong>fuzzy name</strong> match, and every dot's popup shows which signal was
+    used so a fuzzy (name-only) match can be spotted and double-checked at a glance. No key? Manual
+    mode is free: open a dot's pinned search, Ctrl+A · Ctrl+C, paste it back — the built-in parser
+    reads the listings, skips sponsored results, and ranks the dot the same way. Every dot's popup
+    keeps the exact <code>uule</code> URL so any number can be verified against the live page.
   </p>
   <div class="footer-links">
     <a href="https://developers.google.com/web/tools/chrome-devtools/device-mode/device-input-and-sensors" target="_blank" rel="noopener">Chrome DevTools “Sensors” location override</a> ·
@@ -837,13 +862,14 @@ document.getElementById('q').addEventListener('keydown', e => {
 /* ---------- Persistence (localStorage with in-memory fallback) ---------- */
 const STORE_KEY = 'meridian-grid-tracker-v1';
 let memoryStore = null;
-const DEFAULT_SETTINGS = { provider:'dataforseo', relay:'allorigins', serperKey:'', dfsLogin:'', dfsPassword:'', proxyPrefix:'' };
+const DEFAULT_SETTINGS = { provider:'dataforseo', relay:'allorigins', serperKey:'', dfsLogin:'', dfsPassword:'', proxyPrefix:'', strictMatch:'loose' };
 function loadState(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
     if (raw){
       const s = JSON.parse(raw);
       s.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings || {});
+      (s.clients || []).forEach(c => { if (typeof c.phone !== 'string') c.phone = ''; });
       return s;
     }
   } catch(e){ /* private mode / sandbox: fall through */ }
@@ -867,7 +893,7 @@ function normName(s){
     .replace(/[\u2026]|\.\.\.$/g, '')
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
-const STOP_TOKENS = new Set(['inc','ltd','llc','corp','co','company','the','and']);
+const STOP_TOKENS = new Set(['inc','ltd','llc','llp','pllc','pc','corp','co','company','the','and','group','services']);
 function nameTokens(s){
   return normName(s).split(' ').filter(t => t && !STOP_TOKENS.has(t));
 }
@@ -883,10 +909,22 @@ function nameMatches(candidate, target){
   const overlap = ttok.filter(x => cset.has(x)).length;
   return overlap >= Math.max(2, Math.ceil(ttok.length * 0.75));
 }
+/* Phone numbers are one of the strongest disambiguators available: two
+   businesses can share a name across a city, but not a phone line. */
+function normPhone(s){
+  const digits = (s || '').replace(/\D+/g, '');
+  if (digits.length === 11 && digits[0] === '1') return digits.slice(1);
+  return digits;
+}
+function phoneMatches(a, b){
+  const na = normPhone(a), nb = normPhone(b);
+  return na.length >= 7 && na === nb;
+}
 
 /* ---------- GBP share link parsing ---------- */
 const gbpLinkInput = document.getElementById('gbpLink');
 const bizNameInput = document.getElementById('bizName');
+const bizPhoneInput = document.getElementById('bizPhone');
 gbpLinkInput.addEventListener('input', () => {
   const v = gbpLinkInput.value.trim();
   const m = v.match(/\/maps\/place\/([^\/@?]+)/);
@@ -906,6 +944,7 @@ gbpLinkInput.addEventListener('input', () => {
   persistClientFields();
 });
 bizNameInput.addEventListener('input', persistClientFields);
+bizPhoneInput.addEventListener('input', persistClientFields);
 
 /* ---------- Settings (provider / credentials / proxy) ---------- */
 const providerSelect = document.getElementById('provider');
@@ -914,6 +953,7 @@ const apiKeyInput = document.getElementById('apiKey');
 const dfsLoginInput = document.getElementById('dfsLogin');
 const dfsPasswordInput = document.getElementById('dfsPassword');
 const proxyPrefixInput = document.getElementById('proxyPrefix');
+const strictMatchSelect = document.getElementById('strictMatch');
 
 providerSelect.value = state.settings.provider || 'dataforseo';
 relaySelect.value = state.settings.relay || 'allorigins';
@@ -921,6 +961,7 @@ apiKeyInput.value = state.settings.serperKey || '';
 dfsLoginInput.value = state.settings.dfsLogin || '';
 dfsPasswordInput.value = state.settings.dfsPassword || '';
 proxyPrefixInput.value = state.settings.proxyPrefix || '';
+strictMatchSelect.value = state.settings.strictMatch || 'loose';
 
 function toggleProviderFields(){
   const p = providerSelect.value;
@@ -947,6 +988,9 @@ dfsPasswordInput.addEventListener('input', () => {
 proxyPrefixInput.addEventListener('input', () => {
   state.settings.proxyPrefix = proxyPrefixInput.value.trim(); saveState();
 });
+strictMatchSelect.addEventListener('change', () => {
+  state.settings.strictMatch = strictMatchSelect.value; saveState();
+});
 
 /* ---------- Client management ---------- */
 const clientSelect = document.getElementById('clientSelect');
@@ -971,7 +1015,7 @@ document.getElementById('addClientBtn').addEventListener('click', () => {
   if (!name) return;
   const c = {
     id: uid(), name,
-    gbpLink:'', bizName:'', cid:null,
+    gbpLink:'', bizName:'', phone:'', cid:null,
     center:{ lat:null, lng:null, label:'' },
     regionIdx: 0, gridSize: 7, spacingKm: 1.5, surface: 'local',
     keywords: [], activeKeywordId: null
@@ -998,6 +1042,7 @@ function loadClientIntoForm(){
   const c = activeClient();
   gbpLinkInput.value = c ? c.gbpLink : '';
   bizNameInput.value = c ? c.bizName : '';
+  bizPhoneInput.value = c ? (c.phone || '') : '';
   document.getElementById('tLoc').value = c ? c.center.label : '';
   document.getElementById('tLat').value = c && c.center.lat != null ? c.center.lat : '';
   document.getElementById('tLng').value = c && c.center.lng != null ? c.center.lng : '';
@@ -1016,6 +1061,7 @@ function persistClientFields(){
   if (!c) return;
   c.gbpLink = gbpLinkInput.value.trim();
   c.bizName = bizNameInput.value.trim();
+  c.phone = bizPhoneInput.value.trim();
   c.center.label = document.getElementById('tLoc').value.trim();
   const lat = parseFloat(document.getElementById('tLat').value);
   const lng = parseFloat(document.getElementById('tLng').value);
@@ -1173,6 +1219,12 @@ function rankLabel(rank){
   if (rank === 0) return '20+';   // not present in the results that were read
   return String(rank);            // exact position, even beyond 20 (e.g. 23)
 }
+const CONF_LABELS = {
+  cid:   'CID match — exact',
+  phone: 'phone match — exact',
+  exact: 'exact name match',
+  fuzzy: 'fuzzy name match — verify'
+};
 
 /* ---------- Current scan & assisted flow state ---------- */
 let currentScan = null;
@@ -1204,9 +1256,10 @@ function drawScan(scan){
 }
 function addDot(p, idx, scan){
   const cur = (scan === currentScan && idx === currentIdx) ? ' current' : '';
+  const unsure = (p.matchConfidence === 'fuzzy') ? ' unsure' : '';
   const icon = L.divIcon({
     className: '',
-    html: '<div class="rank-dot ' + rankClass(p.rank) + cur + '" id="dot-' + idx + '">' + rankLabel(p.rank) + '</div>',
+    html: '<div class="rank-dot ' + rankClass(p.rank) + cur + unsure + '" id="dot-' + idx + '">' + rankLabel(p.rank) + '</div>',
     iconSize: [34, 34], iconAnchor: [17, 17]
   });
   const m = L.marker([p.lat, p.lng], { icon }).addTo(dotLayer);
@@ -1233,6 +1286,12 @@ function dotPopup(p, idx, scan){
   if (p.matched){
     const matched = document.createElement('div');
     matched.textContent = 'Matched: ' + p.matched;
+    if (p.matchConfidence && CONF_LABELS[p.matchConfidence]){
+      const tag = document.createElement('span');
+      tag.className = 'conf-tag ' + p.matchConfidence;
+      tag.textContent = CONF_LABELS[p.matchConfidence];
+      matched.appendChild(tag);
+    }
     div.appendChild(matched);
   }
   if (p.adRank){
@@ -1275,7 +1334,7 @@ function dotPopup(p, idx, scan){
       if (p.matched && n === p.matched){ a.style.fontWeight = '700'; }
       a.addEventListener('click', (e) => {
         e.preventDefault();
-        p.rank = i + 1; p.matched = n;
+        p.rank = i + 1; p.matched = n; p.matchConfidence = 'manual';
         saveState();
         refreshDot(idx);
         updateSummary(scan); renderVerdict(scan);
@@ -1317,6 +1376,7 @@ function dotPopup(p, idx, scan){
   btn.addEventListener('click', () => {
     const v = parseInt(inp.value, 10);
     p.rank = isNaN(v) ? null : v;
+    p.matchConfidence = 'manual';
     saveState();
     refreshDot(idx);
     updateSummary(scan);
@@ -1342,6 +1402,7 @@ function updateSummary(scan){
   document.getElementById('statPts').textContent = pts.length ? scanned.length + '/' + pts.length : '—';
 
   const mapStatus = document.getElementById('mapStatus');
+  const fuzzyCount = scanned.filter(p => p.matchConfidence === 'fuzzy').length;
   if (!scan){
     mapStatus.textContent = '';
     mapStatus.className = 'scan-status';
@@ -1351,10 +1412,12 @@ function updateSummary(scan){
       'open the point, Ctrl+A · Ctrl+C on Google, Ctrl+V here.';
     mapStatus.className = 'scan-status err';
   } else if (scanned.length < pts.length){
-    mapStatus.textContent = scanned.length + ' of ' + pts.length + ' points scanned — keep the loop going below.';
+    mapStatus.textContent = scanned.length + ' of ' + pts.length + ' points scanned — keep the loop going below.' +
+      (fuzzyCount ? ' ' + fuzzyCount + ' matched by name only (dashed dot) — worth a quick check.' : '');
     mapStatus.className = 'scan-status';
   } else {
-    mapStatus.textContent = 'All ' + pts.length + ' points scanned ✓';
+    mapStatus.textContent = 'All ' + pts.length + ' points scanned ✓' +
+      (fuzzyCount ? ' — ' + fuzzyCount + ' matched by name only (dashed dot); open those to confirm.' : '');
     mapStatus.className = 'scan-status ok';
   }
 }
@@ -1390,6 +1453,7 @@ function renderVerdict(scan){
     story = 'The profile did not appear in the top 20 at any scanned point for this keyword. Check the name matching first (open a dot\u2019s link and confirm the listing is truly absent), then treat this keyword as unclaimed territory.'; }
 
   const kw = activeKeyword();
+  const fuzzyCount = scanned.filter(p => p.matchConfidence === 'fuzzy').length;
   const parts = [];
   parts.push('<h3>' + escapeHtml((c && c.bizName) || 'This business') +
     '<span class="grade" style="background:' + gradeColor + '">' + grade + '</span></h3>');
@@ -1397,6 +1461,7 @@ function renderVerdict(scan){
   detail += 'Top 3 at ' + top3 + ' points (' + solv + '%), visible in the top 20 at ' + found.length +
             ' (' + foundPct + '%), missing at ' + invisible + '.';
   if (avg) detail += ' Average position where found: ' + avg + '.';
+  if (fuzzyCount) detail += ' ' + fuzzyCount + ' of these were matched by name only (no CID/phone match) — worth a quick manual check for accuracy.';
   parts.push('<p>' + detail + ' ' + story + '</p>');
   box.innerHTML = parts.join('');
   box.style.display = 'block';
@@ -1506,7 +1571,7 @@ function createScan(){
   const opts = { hl: region.hl, gl: region.gl, surface: c.surface };
   const pts = gridPoints(c.center.lat, c.center.lng, c.gridSize, c.spacingKm)
     .map(p => ({
-      ...p, rank: null, matched: null, adRank: null, names: [],
+      ...p, rank: null, matched: null, adRank: null, matchConfidence: null, names: [],
       url: buildScanUrl(kw.text, p.lat, p.lng, opts),
       mapsUrl: mapsUrl(kw.text, p.lat, p.lng, region.hl)
     }));
@@ -1531,10 +1596,11 @@ document.getElementById('buildBtn').addEventListener('click', () => {
   }, 100);
 });
 
-/* ---------- Automatic scanning via the Serper.dev data API ----------
+/* ---------- Automatic scanning via a SERP data API ----------
    Browsers block a page from fetching Google directly, so automatic mode
-   sends each grid point to Serper.dev, which fetches Google server-side
-   and returns the ranked places as JSON. 1 point = 1 API credit.        */
+   sends each grid point to a SERP data API (DataForSEO or Serper.dev), which
+   fetches Google server-side and returns the ranked places as JSON.
+   1 point = 1 API credit/call.        */
 const autoScanBtn = document.getElementById('autoScanBtn');
 const stopAutoBtn = document.getElementById('stopAutoBtn');
 let autoRunning = false;
@@ -1556,6 +1622,10 @@ autoScanBtn.addEventListener('click', async () => {
     }
   }
   // 'direct' needs nothing — it will simply report if the relay is blocked.
+  const c = activeClient();
+  if (c && !c.cid && !c.phone){
+    setScanStatus('Tip: add the GBP link (for a CID) or a phone number before scanning — either turns every match from a name guess into a near-certain identification. Continuing with name matching…', '');
+  }
   const scan = createScan();
   if (!scan) return;
   await runAutoScan(scan);
@@ -1612,11 +1682,13 @@ async function runAutoScan(scan){
   currentIdx = nextUnscanned(scan, 0);
   updateAssistPanel();
   const done = scan.points.filter(p => p.rank != null).length;
+  const fuzzyCount = scan.points.filter(p => p.matchConfidence === 'fuzzy').length;
   if (!autoStop){
-    setScanStatus(done === total
+    let msg = done === total
       ? 'Automatic scan complete ✓ — ' + total + ' points ranked.'
-      : done + '/' + total + ' points ranked; failed ones can be re-run or pasted manually.',
-      done === total ? 'ok' : '');
+      : done + '/' + total + ' points ranked; failed ones can be re-run or pasted manually.';
+    if (fuzzyCount) msg += ' ' + fuzzyCount + ' matched by name only (dashed dot) — worth a quick manual check.';
+    setScanStatus(msg, done === total ? 'ok' : '');
   }
 }
 
@@ -1669,7 +1741,7 @@ async function directQuery(p){
     }
     throw new Error('no listings recognized in the fetched page');
   }
-  return parsed.entries.filter(e => !e.ad).map(e => ({ title: e.name, cid: null }));
+  return parsed.entries.filter(e => !e.ad).map(e => ({ title: e.name, cid: null, phone: null }));
 }
 
 async function serperQuery(keyword, p, region, surface){
@@ -1710,10 +1782,13 @@ async function serperQuery(keyword, p, region, surface){
 
 function normalizeSerper(data){
   const places = (data.places || data.local || []).map(x => ({
-    title: x.title || x.name || '', cid: x.cid || null
+    title: x.title || x.name || '',
+    cid: x.cid || null,
+    phone: x.phoneNumber || x.phone || null,
+    address: x.address || null
   })).filter(x => x.title);
   if (places.length) return places;
-  return (data.organic || []).map(x => ({ title: x.title || '', cid: null })).filter(x => x.title);
+  return (data.organic || []).map(x => ({ title: x.title || '', cid: null, phone: null })).filter(x => x.title);
 }
 
 /* ---- DataForSEO (Basic Auth: API login + API password) ----
@@ -1775,25 +1850,37 @@ function normalizeDataForSeo(data, surface){
   if (surface === 'web'){
     // Prefer the local pack; fall back to organic titles.
     const pack = items.filter(it => it.type === 'local_pack')
-      .map(it => ({ title: it.title || '', cid: it.cid || null })).filter(x => x.title);
+      .map(it => ({ title: it.title || '', cid: it.cid || null, phone: it.phone || null, address: it.address || null }))
+      .filter(x => x.title);
     if (pack.length) return pack;
     return items.filter(it => it.type === 'organic')
-      .map(it => ({ title: it.title || '', cid: null })).filter(x => x.title);
+      .map(it => ({ title: it.title || '', cid: null, phone: null })).filter(x => x.title);
   }
   // Maps surface: ranked places, excluding paid items.
   return items.filter(it => it.type === 'maps_search')
-    .map(it => ({ title: it.title || '', cid: it.cid || null })).filter(x => x.title);
+    .map(it => ({ title: it.title || '', cid: it.cid || null, phone: it.phone || null, address: it.address || null }))
+    .filter(x => x.title);
 }
 
+/* Identify the client's listing among the returned results, in order of
+   certainty: CID (from the GBP link) > phone number > exact name match >
+   fuzzy/token-overlap name match. The signal used is recorded as
+   matchConfidence so a name-only guess is never silently indistinguishable
+   from a verified identification. */
 function applyListings(p, listings, c){
   p.names = listings.map(l => l.title).slice(0, 25);
-  p.rank = 0; p.matched = null; p.adRank = null;
+  p.rank = 0; p.matched = null; p.adRank = null; p.matchConfidence = null;
+  const strict = (state.settings.strictMatch === 'strict');
   for (let i = 0; i < listings.length; i++){
     const l = listings[i];
-    const cidHit = c.cid && l.cid && String(l.cid) === String(c.cid);
-    if (cidHit || nameMatches(l.title, c.bizName)){
+    const cidHit   = !!(c.cid && l.cid && String(l.cid) === String(c.cid));
+    const phoneHit = !cidHit && !!(c.phone && l.phone && phoneMatches(c.phone, l.phone));
+    const exactHit = !cidHit && !phoneHit && normName(l.title) === normName(c.bizName) && !!normName(c.bizName);
+    const fuzzyHit = !strict && !cidHit && !phoneHit && !exactHit && nameMatches(l.title, c.bizName);
+    if (cidHit || phoneHit || exactHit || fuzzyHit){
       p.rank = i + 1;
       p.matched = l.title;
+      p.matchConfidence = cidHit ? 'cid' : phoneHit ? 'phone' : exactHit ? 'exact' : 'fuzzy';
       break;
     }
   }
@@ -1878,6 +1965,7 @@ function runParse(fromGesture){
   p.rank = result.rank;             // 0 = not present in the results read
   p.matched = result.matched;
   p.adRank = result.adRank;
+  p.matchConfidence = result.rank ? 'fuzzy' : null;
   p.names = result.organicNames.slice(0, 25);
   saveState();
 
