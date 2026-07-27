@@ -378,7 +378,7 @@
       <div class="col-controls">
 
         <div class="field">
-          <label for="clientSelect">Client</label>
+          <label for="clientSelect">Client folder</label>
           <select id="clientSelect"></select>
           <div class="row-geo" style="margin-top:8px;">
             <input id="newClientName" type="text" placeholder="New client name" autocomplete="off"/>
@@ -391,6 +391,19 @@
             <input id="importFile" type="file" accept="application/json" style="display:none;"/>
           </div>
           <div class="scan-status" id="cloudStatus">Connecting to cloud sync…</div>
+        </div>
+
+        <div class="field" style="background:#e7ebee; border:1px solid var(--paper-line); padding:10px 12px; margin-bottom:18px;">
+          <label for="gbpSelect">GBP profile (within this client)</label>
+          <select id="gbpSelect"></select>
+          <div class="row-geo" style="margin-top:8px;">
+            <input id="newGbpName" type="text" placeholder="e.g. Downtown location" autocomplete="off"/>
+            <button class="btn-secondary" id="addGbpBtn" type="button">Add GBP</button>
+          </div>
+          <div class="preview-actions" style="margin-top:8px;">
+            <button id="deleteGbpBtn" type="button">Delete this GBP</button>
+          </div>
+          <div class="hint">One client can hold several Google Business Profiles — different locations, brands, or duplicate/legacy listings for the same business. Everything below (GBP link, grid, keywords, scans) belongs to whichever GBP is selected here.</div>
         </div>
 
         <hr class="divider"/>
@@ -469,7 +482,7 @@
             <button class="btn-secondary" id="addKwBtn" type="button">Save</button>
           </div>
           <div class="chips" id="kwChips"></div>
-          <div class="hint">Saved per client. Click a keyword to make it the active one; scans and history attach to it.</div>
+          <div class="hint">Saved per GBP profile. Click a keyword to make it the active one; scans and history attach to it.</div>
         </div>
 
         <div class="field" style="margin-top:4px;">
@@ -1034,11 +1047,43 @@ function loadState(){
     if (raw){
       const s = JSON.parse(raw);
       s.settings = Object.assign({}, DEFAULT_SETTINGS, s.settings || {});
-      (s.clients || []).forEach(c => { if (typeof c.phone !== 'string') c.phone = ''; });
+      (s.clients || []).forEach(migrateClient);
       return s;
     }
   } catch(e){ /* private mode / sandbox: fall through */ }
   return memoryStore || { clients: [], activeClientId: null, settings: Object.assign({}, DEFAULT_SETTINGS) };
+}
+/* One client folder can hold several GBP profiles (different locations,
+   duplicate/legacy listings, sister brands, etc). Older saves had the GBP
+   fields directly on the client — this wraps those into a gbps[] array the
+   first time they're loaded, so nothing is lost on upgrade. */
+function migrateClient(c){
+  if (!Array.isArray(c.gbps)){
+    const gbp = {
+      id: uid(), name: c.bizName || c.name || 'Main location',
+      gbpLink: c.gbpLink || '', bizName: c.bizName || '', phone: c.phone || '', cid: c.cid || null,
+      center: c.center || { lat:null, lng:null, label:'' },
+      regionIdx: c.regionIdx || 0, gridSize: c.gridSize || 7, spacingKm: c.spacingKm || 1.5,
+      surface: c.surface || 'local',
+      keywords: c.keywords || [], activeKeywordId: c.activeKeywordId || null
+    };
+    c.gbps = [gbp];
+    c.activeGbpId = gbp.id;
+    delete c.gbpLink; delete c.bizName; delete c.phone; delete c.cid; delete c.center;
+    delete c.regionIdx; delete c.gridSize; delete c.spacingKm; delete c.surface;
+    delete c.keywords; delete c.activeKeywordId;
+  } else {
+    c.gbps.forEach(g => {
+      if (typeof g.phone !== 'string') g.phone = '';
+      if (!Array.isArray(g.keywords)) g.keywords = [];
+      if (!g.center) g.center = { lat:null, lng:null, label:'' };
+      if (!g.name) g.name = g.bizName || 'GBP profile';
+    });
+    if (!c.activeGbpId || !c.gbps.some(g => g.id === c.activeGbpId)){
+      c.activeGbpId = c.gbps.length ? c.gbps[0].id : null;
+    }
+  }
+  return c;
 }
 function saveState(){
   memoryStore = state;
@@ -1074,7 +1119,7 @@ async function doCloudSave(){
 function mergeCloudState(remote){
   if (!remote || !Array.isArray(remote.clients)) return;
   remote.settings = Object.assign({}, DEFAULT_SETTINGS, remote.settings || {});
-  remote.clients.forEach(c => { if (typeof c.phone !== 'string') c.phone = ''; });
+  remote.clients.forEach(migrateClient);
   state = remote;
   memoryStore = state;
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){}
@@ -1115,10 +1160,15 @@ initCloudSync();
 
 function uid(){ return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7); }
 function activeClient(){ return state.clients.find(c => c.id === state.activeClientId) || null; }
-function activeKeyword(){
+function activeGbp(){
   const c = activeClient();
-  if (!c) return null;
-  return c.keywords.find(k => k.id === c.activeKeywordId) || null;
+  if (!c || !Array.isArray(c.gbps) || !c.gbps.length) return null;
+  return c.gbps.find(g => g.id === c.activeGbpId) || c.gbps[0];
+}
+function activeKeyword(){
+  const g = activeGbp();
+  if (!g) return null;
+  return g.keywords.find(k => k.id === g.activeKeywordId) || null;
 }
 function normName(s){
   return (s || '').toLowerCase().normalize('NFKD')
@@ -1168,10 +1218,10 @@ gbpLinkInput.addEventListener('input', () => {
     document.getElementById('tLat').value = coord[1];
     document.getElementById('tLng').value = coord[2];
   }
-  const c = activeClient();
-  if (c){
+  const g = activeGbp();
+  if (g){
     const cidM = v.match(/[?&](?:cid|ludocid)=(\d+)/);
-    c.cid = cidM ? cidM[1] : (c.cid || null);
+    g.cid = cidM ? cidM[1] : (g.cid || null);
   }
   persistClientFields();
 });
@@ -1229,7 +1279,7 @@ includeAdsCheckbox.addEventListener('change', () => {
   state.settings.includeAds = includeAdsCheckbox.checked; saveState();
 });
 
-/* ---------- Client management ---------- */
+/* ---------- Client (folder) management ---------- */
 const clientSelect = document.getElementById('clientSelect');
 function renderClients(){
   clientSelect.innerHTML = '';
@@ -1241,22 +1291,23 @@ function renderClients(){
   }
   state.clients.forEach(c => {
     const opt = document.createElement('option');
-    opt.value = c.id; opt.textContent = c.name;
+    opt.value = c.id; opt.textContent = c.name + ' (' + c.gbps.length + ' GBP' + (c.gbps.length === 1 ? '' : 's') + ')';
     clientSelect.appendChild(opt);
   });
   if (state.activeClientId) clientSelect.value = state.activeClientId;
-  loadClientIntoForm();
+  renderGbps();
 }
 document.getElementById('addClientBtn').addEventListener('click', () => {
   const name = document.getElementById('newClientName').value.trim();
   if (!name) return;
-  const c = {
-    id: uid(), name,
+  const gbp = {
+    id: uid(), name: 'Main location',
     gbpLink:'', bizName:'', phone:'', cid:null,
     center:{ lat:null, lng:null, label:'' },
     regionIdx: 0, gridSize: 7, spacingKm: 1.5, surface: 'local',
     keywords: [], activeKeywordId: null
   };
+  const c = { id: uid(), name, gbps: [gbp], activeGbpId: gbp.id };
   state.clients.push(c);
   state.activeClientId = c.id;
   document.getElementById('newClientName').value = '';
@@ -1265,28 +1316,81 @@ document.getElementById('addClientBtn').addEventListener('click', () => {
 document.getElementById('deleteClientBtn').addEventListener('click', () => {
   const c = activeClient();
   if (!c) return;
-  if (!confirm('Delete client “' + c.name + '” and all its keywords and scans?')) return;
+  if (!confirm('Delete client “' + c.name + '” and all of its GBP profiles, keywords, and scans?')) return;
   state.clients = state.clients.filter(x => x.id !== c.id);
   state.activeClientId = state.clients.length ? state.clients[0].id : null;
   saveState(); renderClients(); renderKeywords(); renderHistory(); drawScan(null);
 });
 clientSelect.addEventListener('change', () => {
   state.activeClientId = clientSelect.value || null;
+  saveState(); renderGbps();
+});
+
+/* ---------- GBP profile management (nested under the active client) ---------- */
+const gbpSelect = document.getElementById('gbpSelect');
+function renderGbps(){
+  const c = activeClient();
+  gbpSelect.innerHTML = '';
+  if (!c || !c.gbps.length){
+    const opt = document.createElement('option');
+    opt.textContent = c ? '— no GBPs yet, add one below —' : '— select a client first —';
+    opt.value = '';
+    gbpSelect.appendChild(opt);
+    loadClientIntoForm();
+    return;
+  }
+  c.gbps.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g.id; opt.textContent = g.name || g.bizName || 'GBP profile';
+    gbpSelect.appendChild(opt);
+  });
+  if (c.activeGbpId) gbpSelect.value = c.activeGbpId;
+  loadClientIntoForm();
+}
+document.getElementById('addGbpBtn').addEventListener('click', () => {
+  const c = activeClient();
+  if (!c){ alert('Add or select a client first.'); return; }
+  const name = document.getElementById('newGbpName').value.trim() || ('Location ' + (c.gbps.length + 1));
+  const gbp = {
+    id: uid(), name,
+    gbpLink:'', bizName:'', phone:'', cid:null,
+    center:{ lat:null, lng:null, label:'' },
+    regionIdx: 0, gridSize: 7, spacingKm: 1.5, surface: 'local',
+    keywords: [], activeKeywordId: null
+  };
+  c.gbps.push(gbp);
+  c.activeGbpId = gbp.id;
+  document.getElementById('newGbpName').value = '';
+  saveState(); renderClients();
+});
+document.getElementById('deleteGbpBtn').addEventListener('click', () => {
+  const c = activeClient();
+  const g = activeGbp();
+  if (!c || !g) return;
+  if (!confirm('Delete GBP profile “' + (g.name || g.bizName) + '” and all its keywords and scans?')) return;
+  c.gbps = c.gbps.filter(x => x.id !== g.id);
+  c.activeGbpId = c.gbps.length ? c.gbps[0].id : null;
+  saveState(); renderClients();
+});
+gbpSelect.addEventListener('change', () => {
+  const c = activeClient();
+  if (!c) return;
+  c.activeGbpId = gbpSelect.value || null;
   saveState(); loadClientIntoForm();
 });
 
 function loadClientIntoForm(){
-  const c = activeClient();
-  gbpLinkInput.value = c ? c.gbpLink : '';
-  bizNameInput.value = c ? c.bizName : '';
-  bizPhoneInput.value = c ? (c.phone || '') : '';
-  document.getElementById('tLoc').value = c ? c.center.label : '';
-  document.getElementById('tLat').value = c && c.center.lat != null ? c.center.lat : '';
-  document.getElementById('tLng').value = c && c.center.lng != null ? c.center.lng : '';
-  document.getElementById('gridSize').value = c ? c.gridSize : 7;
-  document.getElementById('spacing').value = c ? c.spacingKm : 1.5;
-  document.getElementById('surface').value = c ? c.surface : 'local';
-  tRegionSelect.value = c ? c.regionIdx : 0;
+  const g = activeGbp();
+  gbpLinkInput.value = g ? g.gbpLink : '';
+  bizNameInput.value = g ? g.bizName : '';
+  bizPhoneInput.value = g ? (g.phone || '') : '';
+  document.getElementById('tLoc').value = g ? g.center.label : '';
+  document.getElementById('tLat').value = g && g.center.lat != null ? g.center.lat : '';
+  document.getElementById('tLng').value = g && g.center.lng != null ? g.center.lng : '';
+  document.getElementById('gridSize').value = g ? g.gridSize : 7;
+  document.getElementById('spacing').value = g ? g.spacingKm : 1.5;
+  document.getElementById('surface').value = g ? g.surface : 'local';
+  tRegionSelect.value = g ? g.regionIdx : 0;
   renderKeywords();
   renderHistory();
   const kw = activeKeyword();
@@ -1294,20 +1398,27 @@ function loadClientIntoForm(){
   recenterMap();
 }
 function persistClientFields(){
-  const c = activeClient();
-  if (!c) return;
-  c.gbpLink = gbpLinkInput.value.trim();
-  c.bizName = bizNameInput.value.trim();
-  c.phone = bizPhoneInput.value.trim();
-  c.center.label = document.getElementById('tLoc').value.trim();
+  const g = activeGbp();
+  if (!g) return;
+  g.gbpLink = gbpLinkInput.value.trim();
+  g.bizName = bizNameInput.value.trim();
+  g.phone = bizPhoneInput.value.trim();
+  g.center.label = document.getElementById('tLoc').value.trim();
   const lat = parseFloat(document.getElementById('tLat').value);
   const lng = parseFloat(document.getElementById('tLng').value);
-  c.center.lat = isNaN(lat) ? null : lat;
-  c.center.lng = isNaN(lng) ? null : lng;
-  c.gridSize = parseInt(document.getElementById('gridSize').value, 10);
-  c.spacingKm = parseFloat(document.getElementById('spacing').value) || 1.5;
-  c.surface = document.getElementById('surface').value;
-  c.regionIdx = parseInt(tRegionSelect.value, 10) || 0;
+  g.center.lat = isNaN(lat) ? null : lat;
+  g.center.lng = isNaN(lng) ? null : lng;
+  g.gridSize = parseInt(document.getElementById('gridSize').value, 10);
+  g.spacingKm = parseFloat(document.getElementById('spacing').value) || 1.5;
+  g.surface = document.getElementById('surface').value;
+  g.regionIdx = parseInt(tRegionSelect.value, 10) || 0;
+  // Keep the GBP-profile dropdown label (business name) in sync without
+  // forcing a full re-render/rebuild of the select while typing.
+  if (g.bizName && (!g.name || g.name === 'Main location' || /^Location \d+$/.test(g.name))){
+    g.name = g.bizName;
+    const opt = gbpSelect.querySelector('option[value="' + g.id + '"]');
+    if (opt) opt.textContent = g.name;
+  }
   saveState();
 }
 ['tLoc','tLat','tLng','spacing'].forEach(id =>
@@ -1343,6 +1454,7 @@ tGeocodeBtn.addEventListener('click', async () => {
   }
 });
 
+
 /* ---------- Keywords ---------- */
 const kwChips = document.getElementById('kwChips');
 document.getElementById('addKwBtn').addEventListener('click', addKeyword);
@@ -1350,26 +1462,26 @@ document.getElementById('kwInput').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); addKeyword(); }
 });
 function addKeyword(){
-  const c = activeClient();
+  const g = activeGbp();
   const text = document.getElementById('kwInput').value.trim();
-  if (!c){ alert('Add a client first.'); return; }
+  if (!g){ alert('Add a client and a GBP profile first.'); return; }
   if (!text) return;
-  if (c.keywords.some(k => k.text.toLowerCase() === text.toLowerCase())){
+  if (g.keywords.some(k => k.text.toLowerCase() === text.toLowerCase())){
     document.getElementById('kwInput').value = ''; return;
   }
   const kw = { id: uid(), text, scans: [] };
-  c.keywords.push(kw);
-  c.activeKeywordId = kw.id;
+  g.keywords.push(kw);
+  g.activeKeywordId = kw.id;
   document.getElementById('kwInput').value = '';
   saveState(); renderKeywords(); renderHistory(); drawScan(null);
 }
 function renderKeywords(){
-  const c = activeClient();
+  const g = activeGbp();
   kwChips.innerHTML = '';
-  if (!c) return;
-  c.keywords.forEach(k => {
+  if (!g) return;
+  g.keywords.forEach(k => {
     const chip = document.createElement('span');
-    chip.className = 'chip' + (k.id === c.activeKeywordId ? ' active' : '');
+    chip.className = 'chip' + (k.id === g.activeKeywordId ? ' active' : '');
     const label = document.createElement('span');
     label.textContent = k.text + (k.scans.length ? ' · ' + k.scans.length : '');
     const x = document.createElement('span');
@@ -1377,15 +1489,15 @@ function renderKeywords(){
     x.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!confirm('Delete keyword “' + k.text + '” and its scan history?')) return;
-      c.keywords = c.keywords.filter(w => w.id !== k.id);
-      if (c.activeKeywordId === k.id) c.activeKeywordId = c.keywords.length ? c.keywords[0].id : null;
+      g.keywords = g.keywords.filter(w => w.id !== k.id);
+      if (g.activeKeywordId === k.id) g.activeKeywordId = g.keywords.length ? g.keywords[0].id : null;
       saveState(); renderKeywords(); renderHistory();
       const kw = activeKeyword();
       drawScan(kw && kw.scans.length ? kw.scans[kw.scans.length-1] : null);
     });
     chip.appendChild(label); chip.appendChild(x);
     chip.addEventListener('click', () => {
-      c.activeKeywordId = k.id;
+      g.activeKeywordId = k.id;
       saveState(); renderKeywords(); renderHistory();
       drawScan(k.scans.length ? k.scans[k.scans.length-1] : null);
     });
@@ -1437,11 +1549,11 @@ let centerMarker = null;
 let liveMarkers = [];
 
 function recenterMap(){
-  const c = activeClient();
-  if (c && c.center.lat != null && c.center.lng != null){
-    map.setView([c.center.lat, c.center.lng], 12);
+  const g = activeGbp();
+  if (g && g.center.lat != null && g.center.lng != null){
+    map.setView([g.center.lat, g.center.lng], 12);
     if (centerMarker) centerMarker.remove();
-    centerMarker = L.marker([c.center.lat, c.center.lng], { title: c.bizName || c.name }).addTo(map);
+    centerMarker = L.marker([g.center.lat, g.center.lng], { title: g.bizName || g.name }).addTo(map);
   }
 }
 function rankClass(rank){
@@ -1732,7 +1844,7 @@ function updateSummary(scan){
 function renderVerdict(scan){
   const box = document.getElementById('verdictBox');
   const compWrap = document.getElementById('compWrap');
-  const c = activeClient();
+  const g = activeGbp();
   if (!scan){ box.style.display = 'none'; compWrap.style.display = 'none'; return; }
 
   const pts = scan.points;
@@ -1762,7 +1874,7 @@ function renderVerdict(scan){
   const kw = activeKeyword();
   const fuzzyCount = scanned.filter(p => p.matchConfidence === 'fuzzy').length;
   const parts = [];
-  parts.push('<h3>' + escapeHtml((c && c.bizName) || 'This business') +
+  parts.push('<h3>' + escapeHtml((g && g.bizName) || 'This business') +
     '<span class="grade" style="background:' + gradeColor + '">' + grade + '</span></h3>');
   let detail = 'Keyword “' + escapeHtml(kw ? kw.text : '') + '” · ' + scanned.length + ' of ' + pts.length + ' points scanned. ';
   detail += 'Top 3 at ' + top3 + ' points (' + solv + '%), visible in the top 20 at ' + found.length +
@@ -1773,7 +1885,7 @@ function renderVerdict(scan){
   box.innerHTML = parts.join('');
   box.style.display = 'block';
 
-  renderCompetitors(scan, c);
+  renderCompetitors(scan, g);
 }
 
 function renderCompetitors(scan, client){
@@ -1862,21 +1974,21 @@ function setScanStatus(msg, kind){
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 function createScan(){
-  const c = activeClient();
+  const g = activeGbp();
   const kw = activeKeyword();
-  if (!c){ setScanStatus('Add and select a client first.', 'err'); return null; }
+  if (!g){ setScanStatus('Add a client and a GBP profile first.', 'err'); return null; }
   if (!kw){ setScanStatus('Save a keyword and click it to make it active.', 'err'); return null; }
-  if (c.center.lat == null || c.center.lng == null){
+  if (g.center.lat == null || g.center.lng == null){
     setScanStatus('Set the grid centre (geocode the address or enter lat/lng).', 'err'); return null;
   }
-  if (!c.bizName){
+  if (!g.bizName){
     setScanStatus('Enter the business name — the scanner matches against it.', 'err'); return null;
   }
   persistClientFields();
 
-  const region = REGIONS[c.regionIdx] || REGIONS[0];
-  const opts = { hl: region.hl, gl: region.gl, surface: c.surface };
-  const pts = gridPoints(c.center.lat, c.center.lng, c.gridSize, c.spacingKm)
+  const region = REGIONS[g.regionIdx] || REGIONS[0];
+  const opts = { hl: region.hl, gl: region.gl, surface: g.surface };
+  const pts = gridPoints(g.center.lat, g.center.lng, g.gridSize, g.spacingKm)
     .map(p => ({
       ...p, rank: null, matched: null, adRank: null, matchConfidence: null, sparse: false, error: null, names: [],
       url: buildScanUrl(kw.text, p.lat, p.lng, opts),
@@ -1884,8 +1996,8 @@ function createScan(){
     }));
   const scan = {
     ts: Date.now(),
-    grid: { rows: c.gridSize, spacingKm: c.spacingKm },
-    surface: c.surface, region: region.label,
+    grid: { rows: g.gridSize, spacingKm: g.spacingKm },
+    surface: g.surface, region: region.label,
     points: pts
   };
   kw.scans.push(scan);
@@ -1929,8 +2041,8 @@ autoScanBtn.addEventListener('click', async () => {
     }
   }
   // 'direct' needs nothing — it will simply report if the relay is blocked.
-  const c = activeClient();
-  if (c && !c.cid && !c.phone){
+  const g = activeGbp();
+  if (g && !g.cid && !g.phone){
     setScanStatus('Tip: add the GBP link (for a CID) or a phone number before scanning — either turns every match from a name guess into a near-certain identification. Continuing with name matching…', '');
   }
   const scan = createScan();
@@ -1940,9 +2052,9 @@ autoScanBtn.addEventListener('click', async () => {
 stopAutoBtn.addEventListener('click', () => { autoStop = true; });
 
 async function runAutoScan(scan){
-  const c = activeClient();
+  const g = activeGbp();
   const kw = activeKeyword();
-  const region = REGIONS[c.regionIdx] || REGIONS[0];
+  const region = REGIONS[g.regionIdx] || REGIONS[0];
   autoRunning = true; autoStop = false;
   autoScanBtn.disabled = true; stopAutoBtn.disabled = false;
 
@@ -1962,8 +2074,8 @@ async function runAutoScan(scan){
     for (let a = 0; a < attempts; a++){
       if (autoStop) return false;
       try{
-        const listings = await providerQuery(kw.text, p, region, c.surface);
-        applyListings(p, listings, c);
+        const listings = await providerQuery(kw.text, p, region, g.surface);
+        applyListings(p, listings, g);
         p.error = null;
         refreshDot(i);
         return true;
@@ -2051,16 +2163,16 @@ async function runAutoScan(scan){
 /* Re-check a single point on demand — used by the popup's retry button and
    by the bulk "Retry unscanned / low-confidence points" pass. */
 async function retrySinglePoint(scan, idx){
-  const c = activeClient();
+  const g = activeGbp();
   const kw = activeKeyword();
-  if (!c || !kw) return;
-  const region = REGIONS[c.regionIdx] || REGIONS[0];
+  if (!g || !kw) return;
+  const region = REGIONS[g.regionIdx] || REGIONS[0];
   const p = scan.points[idx];
   const el = document.getElementById('dot-' + idx);
   if (el) el.textContent = '…';
   try{
-    const listings = await providerQuery(kw.text, p, region, c.surface);
-    applyListings(p, listings, c);
+    const listings = await providerQuery(kw.text, p, region, g.surface);
+    applyListings(p, listings, g);
     p.error = null;
   } catch (err){
     p.error = err.message;
@@ -2404,9 +2516,9 @@ function runParse(fromGesture){
   if (currentIdx == null){ setParseStatus('All points are scanned — pick a dot on the map to re-scan it.', 'err'); return; }
   const text = pasteBox.value;
   if (!text.trim()){ setParseStatus('Nothing pasted yet.', 'err'); return; }
-  const c = activeClient();
+  const g = activeGbp();
   const includeAds = document.getElementById('includeAds').checked;
-  const result = parsePastedResults(text, c ? c.bizName : '', includeAds);
+  const result = parsePastedResults(text, g ? g.bizName : '', includeAds);
 
   if (!result.entries.length){
     setParseStatus('No listings recognized in that paste. Make sure you copied the whole Google results page (Ctrl+A first), not just the search box.', 'err');
@@ -2783,36 +2895,46 @@ document.getElementById('kwSendBtn').addEventListener('click', async () => {
   sendBtn.disabled = true;
   setKwStatus('Setting up “' + bizName + '” in the Grid Rank Tracker…', '');
 
-  // Reuse an existing client with the same name, or create a new one.
+  // Reuse an existing client (folder) with the same name, or create a new one.
   let c = state.clients.find(x => normName(x.name) === normName(bizName));
   if (!c){
-    c = {
+    c = { id: uid(), name: bizName, gbps: [], activeGbpId: null };
+    state.clients.push(c);
+  }
+  // Within that client, reuse a GBP profile with a matching business name,
+  // or create a new one — this is what lets one client hold several GBPs
+  // (different locations, etc.) without the Keyword Finder overwriting them.
+  let g = c.gbps.find(x => normName(x.bizName || x.name) === normName(bizName));
+  if (!g){
+    g = {
       id: uid(), name: bizName,
       gbpLink: '', bizName: '', phone: '', cid: null,
       center: { lat: null, lng: null, label: '' },
       regionIdx: 0, gridSize: 7, spacingKm: 1.5, surface: 'local',
       keywords: [], activeKeywordId: null
     };
-    state.clients.push(c);
+    c.gbps.push(g);
   }
   if (gbpLink){
-    c.gbpLink = gbpLink;
+    g.gbpLink = gbpLink;
     const cidM = gbpLink.match(/[?&](?:cid|ludocid)=(\d+)/);
-    if (cidM) c.cid = cidM[1];
+    if (cidM) g.cid = cidM[1];
   }
-  c.bizName = bizName;
-  if (phone) c.phone = phone;
-  c.regionIdx = parseInt(kwRegionSelect.value, 10) || 0;
+  g.bizName = bizName;
+  g.name = bizName;
+  if (phone) g.phone = phone;
+  g.regionIdx = parseInt(kwRegionSelect.value, 10) || 0;
   state.activeClientId = c.id;
+  c.activeGbpId = g.id;
 
   // Try to geocode the location for the grid centre, if it isn't set yet.
-  if (c.center.lat == null || c.center.lng == null){
+  if (g.center.lat == null || g.center.lng == null){
     try{
       const hit = await nominatim(locationName || domain);
       if (hit){
-        c.center.lat = parseFloat(hit.lat);
-        c.center.lng = parseFloat(hit.lon);
-        c.center.label = hit.display_name;
+        g.center.lat = parseFloat(hit.lat);
+        g.center.lng = parseFloat(hit.lon);
+        g.center.label = hit.display_name;
       }
     } catch (e){ /* geocoding is best-effort here; the tracker tab can retry it */ }
   }
@@ -2821,16 +2943,16 @@ document.getElementById('kwSendBtn').addEventListener('click', async () => {
   selected.forEach(r => {
     const text = r.keyword.trim();
     if (!text) return;
-    if (!c.keywords.some(k => k.text.toLowerCase() === text.toLowerCase())){
+    if (!g.keywords.some(k => k.text.toLowerCase() === text.toLowerCase())){
       const kw = { id: uid(), text, scans: [] };
-      c.keywords.push(kw);
-      c.activeKeywordId = kw.id;
+      g.keywords.push(kw);
+      g.activeKeywordId = kw.id;
       added++;
     }
   });
 
   saveState();
-  renderClients(); // repopulates the tracker tab's fields for this client
+  renderClients(); // repopulates the tracker tab's fields for this client + GBP
 
   sendBtn.disabled = false;
   setKwStatus('Sent ' + added + ' new keyword(s) to “' + bizName + '” in the Grid Rank Tracker ✓ — switching tabs…', 'ok');
