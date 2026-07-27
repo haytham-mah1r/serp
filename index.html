@@ -4,6 +4,9 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="referrer" content="no-referrer"/>
+<!-- Marker the Meridian Incognito Launcher extension looks for.
+     Without this tag the extension ignores the page entirely. -->
+<meta name="meridian-serp-checker" content="1"/>
 <title>Meridian — Local SERP Checker</title>
 <style>
   :root{
@@ -100,18 +103,31 @@
   .geocode-status{font-size:11px; margin-top:6px; line-height:1.5; min-height:14px;}
   .geocode-status.ok{color:var(--pine);}
   .geocode-status.err{color:#9c3b2e;}
+  /* Incognito bridge status pill */
+  .ext-status{
+    display:flex; align-items:center; gap:8px;
+    font-size:11px; margin-top:10px; line-height:1.5; color:#8a8370;
+  }
+  .ext-status .dot{
+    width:8px; height:8px; border-radius:50%;
+    background:#b0a88f; flex:none;
+  }
+  .ext-status.on{color:var(--pine);}
+  .ext-status.on .dot{background:var(--pine);}
+  .ext-status.warn{color:#9c3b2e;}
+  .ext-status.warn .dot{background:#9c3b2e;}
   .preview-wrap{
     margin-top:16px; max-height:0; overflow:hidden; opacity:0;
     transition:max-height .2s ease, opacity .2s ease;
   }
-  .preview-wrap.show{max-height:280px; opacity:1;}
+  .preview-wrap.show{max-height:320px; opacity:1;}
   .preview{
     font-size:11px; color:var(--ink-soft); word-break:break-all;
     background:#eae4d3; border:1px solid var(--paper-line);
     padding:10px 12px; line-height:1.6;
   }
   .preview a{color:var(--brass-dark); text-decoration:underline;}
-  .preview-actions{display:flex; gap:8px; margin-top:8px;}
+  .preview-actions{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
   .preview-actions button{
     padding:7px 12px; font-family:var(--mono); font-size:11px;
     letter-spacing:.06em; text-transform:uppercase; cursor:pointer;
@@ -119,6 +135,12 @@
     border-radius:1px;
   }
   .preview-actions button:hover{border-color:var(--brass); color:var(--brass-dark);}
+  .preview-actions button:disabled{
+    opacity:.45; cursor:not-allowed;
+  }
+  .preview-actions button:disabled:hover{
+    border-color:var(--paper-line); color:var(--ink-soft);
+  }
   .incog-hint{font-size:11px; color:#8a8370; margin-top:8px; line-height:1.6;}
   .note{
     font-size:12px; color:#7c8590; line-height:1.7;
@@ -209,18 +231,24 @@
     </details>
 
     <button class="go" id="goBtn">Search this location →</button>
+    <div class="ext-status" id="extStatus">
+      <span class="dot"></span>
+      <span id="extStatusText">Incognito bridge: checking for extension…</span>
+    </div>
 
     <div class="preview-wrap" id="previewWrap">
       <div class="preview" id="preview"></div>
       <div class="preview-actions">
         <button id="copyBtn" type="button">Copy URL</button>
         <button id="openBtn" type="button">Open in new tab</button>
+        <button id="openIncogBtn" type="button" disabled>Open in incognito</button>
       </div>
-      <div class="incog-hint">
+      <div class="incog-hint" id="incogHint">
         For a clean, logged-out view: right-click the link above →
         “Open link in incognito window” (Chrome/Edge) or “Open in new private window” (Firefox),
         or copy the URL into a private window. Pages can’t launch incognito windows themselves —
-        browsers block that by design.
+        install the companion “Meridian Incognito Launcher” extension and searches will open
+        there automatically.
       </div>
     </div>
   </div>
@@ -233,6 +261,14 @@
     Without coordinates it falls back to the older <code>w+</code> canonical-name encoding.
     To verify what Google thinks, search for <em>where am i</em> and check the map onebox,
     or scroll to the bottom of the results page where Google states the location it used.
+  </p>
+  <p class="note">
+    <strong>Incognito bridge:</strong> browsers deliberately forbid web pages from opening
+    incognito/private windows, so this page pairs with a tiny local extension. Once installed
+    (and granted “Allow in Incognito” in Chrome/Edge, or “Run in Private Windows” in Firefox),
+    the <em>Search this location</em> button routes every search straight into a fresh
+    incognito window automatically. Without the extension, searches open in a normal tab
+    as before.
   </p>
   <div class="footer-links">
     <a href="https://developers.google.com/web/tools/chrome-devtools/device-mode/device-input-and-sensors" target="_blank" rel="noopener">Chrome DevTools “Sensors” location override</a> ·
@@ -292,6 +328,77 @@ REGIONS.forEach((r, i) => {
   regionSelect.appendChild(opt);
 });
 regionSelect.value = 0; // default: Canada — English
+
+/* ---------- Incognito bridge (companion extension) ----------
+   A web page cannot open an incognito window itself — browsers block that
+   by design. The "Meridian Incognito Launcher" extension listens on this
+   page (identified by the meridian-serp-checker meta tag), and its
+   background worker opens windows with { incognito: true }.
+
+   Protocol (window.postMessage):
+     page  -> ext : { type:'MERIDIAN_PING' }
+     ext   -> page: { type:'MERIDIAN_EXT_READY', version }
+     page  -> ext : { type:'MERIDIAN_OPEN_INCOGNITO', url }
+     ext   -> page: { type:'MERIDIAN_OPEN_RESULT', ok, error }              */
+
+let extReady = false;
+const extStatus = document.getElementById('extStatus');
+const extStatusText = document.getElementById('extStatusText');
+const openIncogBtn = document.getElementById('openIncogBtn');
+const incogHint = document.getElementById('incogHint');
+
+function setExtState(state, text){
+  extStatus.className = 'ext-status' + (state ? ' ' + state : '');
+  extStatusText.textContent = text;
+}
+
+window.addEventListener('message', (event) => {
+  if (event.source !== window) return;
+  const msg = event.data;
+  if (!msg || typeof msg !== 'object') return;
+
+  if (msg.type === 'MERIDIAN_EXT_READY'){
+    extReady = true;
+    openIncogBtn.disabled = false;
+    setExtState('on', 'Incognito bridge: connected — searches will open in an incognito window.');
+    incogHint.textContent = 'The incognito launcher extension is active. ' +
+      '“Search this location” and “Open in incognito” both launch a fresh incognito window; ' +
+      '“Open in new tab” still uses a normal tab if you ever need one.';
+  }
+
+  if (msg.type === 'MERIDIAN_OPEN_RESULT' && !msg.ok){
+    // Most common cause: the extension is installed but hasn't been granted
+    // incognito access yet. Fall back to a normal tab so the search isn't lost.
+    setExtState('warn',
+      'Incognito bridge error: ' + (msg.error || 'unknown') +
+      ' — grant the extension “Allow in Incognito” (Chrome/Edge) or ' +
+      '“Run in Private Windows” (Firefox). Opened in a normal tab instead.');
+    const url = buildUrl();
+    if (url) window.open(url, '_blank', 'noopener');
+  }
+});
+
+// Ask the extension to announce itself (covers load-order races), then
+// settle the status text if nothing answers.
+function pingExtension(){
+  window.postMessage({ type: 'MERIDIAN_PING' }, '*');
+}
+pingExtension();
+window.addEventListener('load', pingExtension);
+setTimeout(() => {
+  if (!extReady){
+    setExtState('', 'Incognito bridge: extension not detected — searches open in a normal tab. ' +
+      'Install the companion extension to auto-launch incognito.');
+  }
+}, 1500);
+
+function openSearch(url){
+  if (extReady){
+    window.postMessage({ type: 'MERIDIAN_OPEN_INCOGNITO', url }, '*');
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
 
 /* ---------- UULE encoding ----------
    IMPORTANT: Google expects STANDARD base64 here (with +, /, = intact),
@@ -483,11 +590,21 @@ copyBtn.addEventListener('click', async () => {
   setTimeout(() => copyBtn.textContent = 'Copy URL', 1600);
 });
 
+// "Open in new tab" always uses a normal tab, even with the bridge active,
+// so you keep a way to see the logged-in view when you want it.
 document.getElementById('openBtn').addEventListener('click', () => {
   const url = buildUrl();
   if (url) window.open(url, '_blank', 'noopener');
 });
 
+// "Open in incognito" requires the bridge; the button stays disabled otherwise.
+openIncogBtn.addEventListener('click', () => {
+  const url = buildUrl();
+  if (!url || !extReady) return;
+  window.postMessage({ type: 'MERIDIAN_OPEN_INCOGNITO', url }, '*');
+});
+
+// Main action: incognito when the bridge is present, normal tab otherwise.
 document.getElementById('goBtn').addEventListener('click', () => {
   const url = buildUrl();
   if (!url){
@@ -495,7 +612,7 @@ document.getElementById('goBtn').addEventListener('click', () => {
     return;
   }
   updatePreview();
-  window.open(url, '_blank', 'noopener');
+  openSearch(url);
 });
 
 document.getElementById('q').addEventListener('keydown', e => {
