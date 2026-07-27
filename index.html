@@ -445,6 +445,7 @@
           <select id="provider">
             <option value="dataforseo">DataForSEO</option>
             <option value="serper">Serper.dev</option>
+            <option value="direct">No API — direct fetch (experimental)</option>
           </select>
           <div class="hint">Browsers forbid a page from fetching Google itself, so automatic mode routes each grid point through a SERP data API that queries Google server-side. Credentials are stored only in this browser. No account? Manual paste mode below is free.</div>
         </div>
@@ -464,6 +465,17 @@
             <label for="apiKey">Serper.dev API key</label>
             <input id="apiKey" type="password" placeholder="paste your key from serper.dev" autocomplete="off"/>
             <div class="hint">Free trial credits on signup; each grid point = 1 credit.</div>
+          </div>
+        </div>
+        <div id="directFields" style="display:none;">
+          <div class="field">
+            <label for="relay">Fetch relay</label>
+            <select id="relay">
+              <option value="allorigins">AllOrigins (free public relay)</option>
+              <option value="corsproxy">corsproxy.io (free public relay)</option>
+              <option value="custom">Custom — uses the CORS proxy prefix in Connection settings</option>
+            </select>
+            <div class="hint">Zero keys, zero accounts: each point's pinned search URL is fetched through the relay and the returned page is read by the same scanner that reads your pastes. Honest caveat: Google bot-walls shared relay IPs, so this mode can stop working at any time — the scan detects the block and tells you. Paste mode always works; APIs are always automatic. Your queries pass through the relay's servers.</div>
           </div>
         </div>
         <details>
@@ -825,7 +837,7 @@ document.getElementById('q').addEventListener('keydown', e => {
 /* ---------- Persistence (localStorage with in-memory fallback) ---------- */
 const STORE_KEY = 'meridian-grid-tracker-v1';
 let memoryStore = null;
-const DEFAULT_SETTINGS = { provider:'dataforseo', serperKey:'', dfsLogin:'', dfsPassword:'', proxyPrefix:'' };
+const DEFAULT_SETTINGS = { provider:'dataforseo', relay:'allorigins', serperKey:'', dfsLogin:'', dfsPassword:'', proxyPrefix:'' };
 function loadState(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
@@ -897,12 +909,14 @@ bizNameInput.addEventListener('input', persistClientFields);
 
 /* ---------- Settings (provider / credentials / proxy) ---------- */
 const providerSelect = document.getElementById('provider');
+const relaySelect = document.getElementById('relay');
 const apiKeyInput = document.getElementById('apiKey');
 const dfsLoginInput = document.getElementById('dfsLogin');
 const dfsPasswordInput = document.getElementById('dfsPassword');
 const proxyPrefixInput = document.getElementById('proxyPrefix');
 
 providerSelect.value = state.settings.provider || 'dataforseo';
+relaySelect.value = state.settings.relay || 'allorigins';
 apiKeyInput.value = state.settings.serperKey || '';
 dfsLoginInput.value = state.settings.dfsLogin || '';
 dfsPasswordInput.value = state.settings.dfsPassword || '';
@@ -912,10 +926,14 @@ function toggleProviderFields(){
   const p = providerSelect.value;
   document.getElementById('dfsFields').style.display = p === 'dataforseo' ? 'block' : 'none';
   document.getElementById('serperFields').style.display = p === 'serper' ? 'block' : 'none';
+  document.getElementById('directFields').style.display = p === 'direct' ? 'block' : 'none';
 }
 toggleProviderFields();
 providerSelect.addEventListener('change', () => {
   state.settings.provider = providerSelect.value; saveState(); toggleProviderFields();
+});
+relaySelect.addEventListener('change', () => {
+  state.settings.relay = relaySelect.value; saveState();
 });
 apiKeyInput.addEventListener('input', () => {
   state.settings.serperKey = apiKeyInput.value.trim(); saveState();
@@ -1530,13 +1548,14 @@ autoScanBtn.addEventListener('click', async () => {
       apiKeyInput.focus();
       return;
     }
-  } else {
+  } else if (prov === 'dataforseo'){
     if (!(state.settings.dfsLogin || '').trim() || !(state.settings.dfsPassword || '').trim()){
       setScanStatus('DataForSEO needs BOTH fields: API login (your account email) AND the API password — find them at app.dataforseo.com → API Access.', 'err');
       (!(state.settings.dfsLogin || '').trim() ? dfsLoginInput : dfsPasswordInput).focus();
       return;
     }
   }
+  // 'direct' needs nothing — it will simply report if the relay is blocked.
   const scan = createScan();
   if (!scan) return;
   await runAutoScan(scan);
@@ -1551,6 +1570,9 @@ async function runAutoScan(scan){
   autoScanBtn.disabled = true; stopAutoBtn.disabled = false;
 
   const total = scan.points.length;
+  const isDirect = (state.settings.provider === 'direct');
+  const stepDelay = isDirect ? 1500 : 350;
+  let consecutiveFails = 0;
   for (let i = 0; i < total; i++){
     if (autoStop){
       setScanStatus('Stopped at point ' + i + '/' + total + ' — results so far are saved. Remaining dots can be pasted manually or re-run.', '');
@@ -1563,16 +1585,25 @@ async function runAutoScan(scan){
     try{
       const listings = await providerQuery(kw.text, p, region, c.surface);
       applyListings(p, listings, c);
+      consecutiveFails = 0;
     } catch (err){
+      consecutiveFails++;
       if (err.fatal){
         setScanStatus('Scan aborted at point ' + (i + 1) + ': ' + err.message, 'err');
+        break;
+      }
+      if (consecutiveFails >= 3){
+        setScanStatus('Aborted after 3 consecutive failures (' + err.message + ').' +
+          (isDirect
+            ? ' The free relay is being blocked — this is the expected failure mode of no-API scanning. Paste mode below always works; an API provider is always automatic.'
+            : ' Check the connection and credentials, then re-run; completed points are saved.'), 'err');
         break;
       }
       setScanStatus('Point ' + (i + 1) + ' failed (' + err.message + ') — continuing.', 'err');
     }
     refreshDot(i);
     updateSummary(scan); renderVerdict(scan); saveState();
-    await sleep(350);
+    await sleep(stepDelay);
   }
 
   autoRunning = false;
@@ -1590,9 +1621,55 @@ async function runAutoScan(scan){
 }
 
 function providerQuery(keyword, p, region, surface){
-  return (state.settings.provider === 'serper')
-    ? serperQuery(keyword, p, region, surface).then(normalizeSerper)
-    : dataForSeoQuery(keyword, p, region, surface).then(d => normalizeDataForSeo(d, surface));
+  const prov = state.settings.provider || 'dataforseo';
+  if (prov === 'serper') return serperQuery(keyword, p, region, surface).then(normalizeSerper);
+  if (prov === 'direct') return directQuery(p);
+  return dataForSeoQuery(keyword, p, region, surface).then(d => normalizeDataForSeo(d, surface));
+}
+
+/* ---- No-API direct fetch (experimental) ----
+   Fetches the point's own pinned search URL through a free public CORS relay
+   and reads the returned HTML with the same scanner that reads pastes.
+   Known weakness: Google bot-walls shared relay IPs; blocks are detected
+   and reported honestly instead of producing empty dots.                  */
+function buildRelayUrl(target){
+  const relay = state.settings.relay || 'allorigins';
+  if (relay === 'allorigins') return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(target);
+  if (relay === 'corsproxy')  return 'https://corsproxy.io/?url=' + encodeURIComponent(target);
+  return (state.settings.proxyPrefix || '').trim() + target;   // custom prefix
+}
+function htmlToText(html){
+  return html
+    .replace(/<(script|style|noscript|svg)[\s\S]*?<\/\1>/gi, ' ')
+    .replace(/<br[^>]*>/gi, '\n')
+    .replace(/<\/(div|p|li|tr|td|h[1-6]|section|article|a)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ')
+    .replace(/&middot;|&#183;/g, '·')
+    .split('\n').map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n');
+}
+async function directQuery(p){
+  let res;
+  try{
+    res = await fetch(buildRelayUrl(p.url), { headers: { 'Accept': 'text/html' } });
+  } catch (e){
+    throw new Error('relay unreachable (network/CORS) — try the other relay in the dropdown');
+  }
+  if (!res.ok) throw new Error('relay returned HTTP ' + res.status);
+  const html = await res.text();
+  const low = html.toLowerCase();
+  if (low.includes('unusual traffic') || low.includes('/sorry/') || low.includes('recaptcha')){
+    throw new Error('Google bot-walled the relay (CAPTCHA) — the known weakness of no-API mode');
+  }
+  const parsed = parsePastedResults(htmlToText(html), '', false);
+  if (!parsed.entries.length){
+    if (low.includes('enable javascript')){
+      throw new Error('Google served a JS-required page to the relay — no listings readable');
+    }
+    throw new Error('no listings recognized in the fetched page');
+  }
+  return parsed.entries.filter(e => !e.ad).map(e => ({ title: e.name, cid: null }));
 }
 
 async function serperQuery(keyword, p, region, surface){
