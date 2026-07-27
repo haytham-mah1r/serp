@@ -6,30 +6,36 @@
 <meta name="referrer" content="no-referrer"/>
 <title>Meridian — Local SERP Checker &amp; Grid Rank Tracker</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
 <style>
   :root{
-    --ink:#12181f;
-    --ink-soft:#39424c;
-    --paper:#f3efe4;
-    --paper-line:#d8d0ba;
-    --brass:#a8763a;
-    --brass-dark:#7a5426;
-    --pine:#2f4a3d;
-    --rank-good:#2e6b3e;
-    --rank-mid:#b57e1f;
-    --rank-bad:#9c3b2e;
+    /* EDGE Marketing & Design brand palette — sampled directly from the
+       uploaded logo file (edge--logo.png): orange #e87722, charcoal-navy
+       #333f48. Everything below reads from these variables. */
+    --ink:#333f48;
+    --ink-soft:#5a6b76;
+    --paper:#f5f6f4;
+    --paper-line:#dbe1e6;
+    --brass:#e87722;
+    --brass-dark:#b45c1a;
+    --pine:#333f48;
+    --rank-good:#1f7a5c;
+    --rank-mid:#e87722;
+    --rank-bad:#b45c1a;
     --rank-lost:#5c2620;
-    --rank-none:#8d8672;
-    --mono: "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
-    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --rank-none:#7c8792;
+    --mono: "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+    --serif: "Poppins", "Segoe UI", Helvetica, Arial, sans-serif;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
     background:var(--ink);
     background-image:
-      radial-gradient(circle at 15% 20%, rgba(168,118,58,0.08), transparent 40%),
-      radial-gradient(circle at 85% 80%, rgba(47,74,61,0.15), transparent 45%);
+      radial-gradient(circle at 15% 20%, rgba(232,119,34,0.12), transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(51,63,72,0.25), transparent 45%);
     color:var(--paper);
     font-family:var(--mono);
     min-height:100vh;
@@ -42,6 +48,9 @@
     font-size:11px; letter-spacing:.18em; text-transform:uppercase;
     color:var(--brass); margin-bottom:10px;
   }
+  .brand-row{display:flex; align-items:center; gap:14px; margin-bottom:4px;}
+  .brand-logo{height:38px; width:auto; display:block; background:#fff; padding:6px 10px; border-radius:3px;}
+  .brand-row .eyebrow{margin-bottom:0;}
   h1{
     font-family:var(--serif); font-weight:500; font-size:2.1rem;
     line-height:1.15; margin:0 0 8px; color:var(--paper);
@@ -54,7 +63,7 @@
   .tab{
     padding:11px 20px; font-family:var(--mono); font-size:12px;
     letter-spacing:.1em; text-transform:uppercase; cursor:pointer;
-    background:transparent; color:#8a9199; border:1px solid rgba(216,208,186,.25);
+    background:transparent; color:#8a9199; border:1px solid rgba(219,225,230,.25);
     border-bottom:none; border-radius:2px 2px 0 0;
   }
   .tab.active{background:var(--paper); color:var(--ink); border-color:var(--paper);}
@@ -93,7 +102,7 @@
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
   .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
   .row-geo{display:grid; grid-template-columns:1fr auto; gap:10px; align-items:end;}
-  .hint{font-size:11px; color:#8a8370; margin-top:5px; line-height:1.5;}
+  .hint{font-size:11px; color:#6b7580; margin-top:5px; line-height:1.5;}
   .divider{border:none; border-top:1px dashed var(--paper-line); margin:22px 0;}
   details summary{
     font-size:11px; letter-spacing:.1em; text-transform:uppercase;
@@ -122,7 +131,7 @@
   .preview-wrap.show{max-height:320px; opacity:1;}
   .preview{
     font-size:11px; color:var(--ink-soft); word-break:break-all;
-    background:#eae4d3; border:1px solid var(--paper-line); padding:10px 12px; line-height:1.6;
+    background:#e7ebee; border:1px solid var(--paper-line); padding:10px 12px; line-height:1.6;
   }
   .preview a{color:var(--brass-dark); text-decoration:underline;}
   .preview-actions{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
@@ -132,7 +141,7 @@
     background:#fff; border:1px solid var(--paper-line); color:var(--ink-soft); border-radius:1px;
   }
   .preview-actions button:hover, .chip-btn:hover{border-color:var(--brass); color:var(--brass-dark);}
-  .incog-hint{font-size:11px; color:#8a8370; margin-top:8px; line-height:1.6;}
+  .incog-hint{font-size:11px; color:#6b7580; margin-top:8px; line-height:1.6;}
   .note{font-size:12px; color:#7c8590; line-height:1.7; margin-top:28px; max-width:74ch;}
   .note strong{color:#b9c1c9;}
   .note code{color:#b9c1c9;}
@@ -156,21 +165,21 @@
     padding:6px 10px; font-size:12px; background:#fff;
     border:1px solid var(--paper-line); border-radius:1px; cursor:pointer;
   }
-  .chip.active{border-color:var(--brass-dark); background:#f6ead6; color:var(--brass-dark);}
+  .chip.active{border-color:var(--brass-dark); background:#fde2d4; color:var(--brass-dark);}
   .chip .x{color:#9c3b2e; cursor:pointer; font-size:11px;}
   .scan-status{font-size:11px; margin-top:8px; line-height:1.6; min-height:16px; color:var(--ink-soft);}
   .scan-status.err{color:#9c3b2e;}
   .scan-status.ok{color:var(--pine);}
   .summary-strip{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:14px;}
   .summary-strip .stat{
-    background:#eae4d3; border:1px solid var(--paper-line); padding:10px 12px; text-align:center;
+    background:#e7ebee; border:1px solid var(--paper-line); padding:10px 12px; text-align:center;
   }
   .summary-strip .stat b{display:block; font-family:var(--serif); font-size:1.4rem; font-weight:500;}
   .summary-strip .stat span{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);}
 
   /* ---- Assisted paste-scan panel ---- */
   .assist{
-    background:#eae4d3; border:1px solid var(--paper-line);
+    background:#e7ebee; border:1px solid var(--paper-line);
     padding:14px; margin-top:14px;
   }
   .assist .point-line{
@@ -183,7 +192,7 @@
 
   /* ---- Verdict & competitor board ---- */
   .verdict{
-    margin-top:14px; background:#eae4d3; border:1px solid var(--paper-line);
+    margin-top:14px; background:#e7ebee; border:1px solid var(--paper-line);
     padding:14px 16px;
   }
   .verdict h3{
@@ -209,10 +218,10 @@
   }
   table.comp th{
     font-size:10px; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--ink-soft); background:#eae4d3; font-weight:400;
+    color:var(--ink-soft); background:#e7ebee; font-weight:400;
   }
   table.comp td.num{text-align:right; font-variant-numeric:tabular-nums;}
-  table.comp tr.you{background:#f6ead6;}
+  table.comp tr.you{background:#fde2d4;}
   table.comp tr.you td:first-child::after{content:" ← you"; color:var(--brass-dark); font-size:10px;}
 
   /* Leaflet rank dots */
@@ -261,7 +270,12 @@
 </head>
 <body>
 <div class="sheet">
-  <div class="eyebrow">Meridian · Local SERP checker &amp; grid rank tracker</div>
+  <div class="brand-row">
+    <img src="https://www.edgemarketing.ca/application/files/9117/4544/1259/edge--logo.png"
+         alt="EDGE Marketing & Design Inc." class="brand-logo"
+         onerror="this.style.display='none'"/>
+    <div class="eyebrow">Meridian · Local SERP checker &amp; grid rank tracker</div>
+  </div>
   <h1>See Google from anywhere,<br/>without leaving your desk.</h1>
   <p class="sub">One-off checks build a pinned Google URL with <code>uule</code>/<code>hl</code>/<code>gl</code>. The Grid Tracker scatters searches across a map around a Google Business Profile and ranks every point — fully automatically through a SERP data API, or free via copy-paste — then tells you how the profile is really doing in the area.</p>
 
@@ -376,6 +390,7 @@
             <button id="importBtn" type="button">Import</button>
             <input id="importFile" type="file" accept="application/json" style="display:none;"/>
           </div>
+          <div class="scan-status" id="cloudStatus">Connecting to cloud sync…</div>
         </div>
 
         <hr class="divider"/>
@@ -692,11 +707,72 @@
   </p>
   <div class="footer-links">
     <a href="https://developers.google.com/web/tools/chrome-devtools/device-mode/device-input-and-sensors" target="_blank" rel="noopener">Chrome DevTools “Sensors” location override</a> ·
-    <a href="https://nominatim.org/" target="_blank" rel="noopener">Geocoding by OpenStreetMap Nominatim</a>
+    <a href="https://nominatim.org/" target="_blank" rel="noopener">Geocoding by OpenStreetMap Nominatim</a><br/>
+    Built for <a href="https://www.edgemarketing.ca/" target="_blank" rel="noopener">EDGE Marketing &amp; Design Inc.</a>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script>
+/* =========================================================================
+   CLOUD SYNC (Firebase) — replaces browser-only localStorage with a real
+   database, so client lists, keywords, scan history, and API settings
+   persist across devices/browsers instead of living in one machine's
+   local storage.
+
+   IMPORTANT — READ BEFORE RELYING ON THIS:
+   The firebaseConfig block below (apiKey, projectId, etc.) is NOT a secret.
+   Every Firebase web app ships this config to the browser in plain sight —
+   that's how Firebase is designed to work. It identifies *which* Firebase
+   project to talk to; it does not grant access by itself. The only thing
+   that actually keeps this data private is the Firestore Security Rules
+   you set in the Firebase console. Anonymous sign-in below gives each
+   visitor a stable random ID (auth.currentUser.uid) and everything is
+   stored under users/{uid}/... — but that only stays private if your
+   Firestore rules require request.auth.uid == uid. Paste this into
+   Firebase console → Firestore Database → Rules, then Publish, or this
+   data is readable/writable by anyone:
+
+     rules_version = '2';
+     service cloud.firestore {
+       match /databases/{database}/documents {
+         match /users/{userId}/{document=**} {
+           allow read, write: if request.auth != null && request.auth.uid == userId;
+         }
+       }
+     }
+
+   Until those rules are published, Firestore's default "test mode" rules
+   (open to anyone, or closed to everyone — check which one you started
+   with) apply, which is the opposite of private.
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyA94BzMWcwqLK9BpmclLw6L0hSDiyPhQ_AA",
+  authDomain: "serp-79020.firebaseapp.com",
+  projectId: "serp-79020",
+  storageBucket: "serp-79020.firebasestorage.app",
+  messagingSenderId: "760216876354",
+  appId: "1:760216876354:web:27c96045159c7920af44db"
+};
+firebase.initializeApp(firebaseConfig);
+const fbAuth = firebase.auth();
+const fbDb = firebase.firestore();
+let fbUid = null;
+let fbReady = false;       // true once we've done the first read from Firestore
+let fbSaveTimer = null;
+const CLOUD_DOC_COLLECTION = 'users';
+const CLOUD_DOC_ID = 'meridianState';
+
+function setCloudStatus(msg, kind){
+  const el = document.getElementById('cloudStatus');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'scan-status' + (kind ? ' ' + kind : '');
+}
+</script>
 <script>
 /* =========================================================================
    SHARED: regions, uule encoding, geocoding
@@ -967,8 +1043,75 @@ function loadState(){
 function saveState(){
   memoryStore = state;
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){ /* keep in memory */ }
+  scheduleCloudSave();
 }
 let state = loadState();
+
+/* ---------- Cloud sync (Firestore) ----------
+   Local storage stays as the fast, offline-first copy (see saveState above);
+   this layer mirrors it to Firestore under users/{uid}/... so the same
+   clients/keywords/scans/API settings are available from any browser or
+   device once signed in, instead of being stranded in one browser's
+   localStorage. See the big comment near the top of the file for the
+   Firestore Security Rules this depends on to actually stay private. */
+function scheduleCloudSave(){
+  if (!fbReady) return; // don't push a stale/partial state before the first cloud read completes
+  if (fbSaveTimer) clearTimeout(fbSaveTimer);
+  setCloudStatus('Saving to cloud…', '');
+  fbSaveTimer = setTimeout(doCloudSave, 800);
+}
+async function doCloudSave(){
+  if (!fbUid) return;
+  try{
+    await fbDb.collection(CLOUD_DOC_COLLECTION).doc(fbUid)
+      .collection('data').doc(CLOUD_DOC_ID)
+      .set(JSON.parse(JSON.stringify(state)));
+    setCloudStatus('✓ Synced to cloud', 'ok');
+  } catch (err){
+    setCloudStatus('Cloud save failed: ' + err.message + ' — changes are still saved locally in this browser. Check your Firestore Security Rules.', 'err');
+  }
+}
+function mergeCloudState(remote){
+  if (!remote || !Array.isArray(remote.clients)) return;
+  remote.settings = Object.assign({}, DEFAULT_SETTINGS, remote.settings || {});
+  remote.clients.forEach(c => { if (typeof c.phone !== 'string') c.phone = ''; });
+  state = remote;
+  memoryStore = state;
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e){}
+}
+async function initCloudSync(){
+  try{
+    setCloudStatus('Connecting to cloud sync…', '');
+    await fbAuth.signInAnonymously();
+  } catch (err){
+    setCloudStatus('Cloud sign-in failed: ' + err.message + ' — working locally only in this browser.', 'err');
+    return;
+  }
+  fbAuth.onAuthStateChanged(async (user) => {
+    if (!user) return;
+    fbUid = user.uid;
+    try{
+      const docRef = fbDb.collection(CLOUD_DOC_COLLECTION).doc(fbUid).collection('data').doc(CLOUD_DOC_ID);
+      const snap = await docRef.get();
+      if (snap.exists){
+        mergeCloudState(snap.data());
+        setCloudStatus('✓ Loaded from cloud', 'ok');
+      } else {
+        setCloudStatus('No cloud data yet — this browser\u2019s local data will be saved as the first cloud copy.', '');
+      }
+    } catch (err){
+      setCloudStatus('Cloud read failed: ' + err.message + ' — working locally only in this browser. Check your Firestore Security Rules (see comment near the top of this file).', 'err');
+      fbReady = true; // still allow local-only use without repeatedly retrying mid-session
+      return;
+    }
+    fbReady = true;
+    // Refresh every part of the UI that depends on `state` now that the
+    // cloud copy (if any) has been merged in.
+    renderClients();
+    doCloudSave(); // make sure the cloud copy reflects any local-only edits made before this finished
+  });
+}
+initCloudSync();
 
 function uid(){ return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7); }
 function activeClient(){ return state.clients.find(c => c.id === state.activeClientId) || null; }
@@ -1440,7 +1583,7 @@ function dotPopup(p, idx, scan){
     const sum = document.createElement('summary');
     sum.textContent = 'Results read here (' + p.names.length + ') — click yours to set the rank';
     sum.style.cursor = 'pointer';
-    sum.style.color = '#2f4a3d';
+    sum.style.color = 'var(--pine)';
     det.appendChild(sum);
     const ol = document.createElement('ol');
     ol.style.cssText = 'margin:4px 0 0 18px; padding:0; max-height:160px; overflow:auto;';
@@ -1468,7 +1611,7 @@ function dotPopup(p, idx, scan){
     const sum2 = document.createElement('summary');
     sum2.textContent = 'Sponsored results read here (' + p.adNames.length + ') — click yours to set the rank';
     sum2.style.cursor = 'pointer';
-    sum2.style.color = '#7a5426';
+    sum2.style.color = 'var(--brass-dark)';
     det2.appendChild(sum2);
     const ol2 = document.createElement('ol');
     ol2.style.cssText = 'margin:4px 0 0 18px; padding:0; max-height:160px; overflow:auto;';
