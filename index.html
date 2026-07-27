@@ -614,6 +614,73 @@
           <label for="historySelect">Scan history (active keyword)</label>
           <select id="historySelect"></select>
         </div>
+
+        <hr class="divider"/>
+
+        <details>
+          <summary>Compare all GBPs in this client — one keyword, one area</summary>
+          <div class="field">
+            <label for="cmpKeyword">Keyword to compare</label>
+            <input id="cmpKeyword" type="text" placeholder="graphic designer in lacombe" autocomplete="off"/>
+            <div class="hint">Runs this one keyword against every GBP profile saved under the current client, across a single grid — so you can see at a glance which of your listings show up in this area and which don't.</div>
+          </div>
+          <div class="field">
+            <div class="row-geo">
+              <div>
+                <label for="cmpLoc">Area to test</label>
+                <input id="cmpLoc" type="text" placeholder="Any address or place — independent of each GBP's own location" autocomplete="off"/>
+              </div>
+              <button class="btn-secondary" id="cmpGeocodeBtn" type="button">Geocode</button>
+            </div>
+            <div class="geocode-status" id="cmpGeoStatus"></div>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="cmpLat">Latitude</label>
+              <input id="cmpLat" type="text" inputmode="decimal" autocomplete="off"/>
+            </div>
+            <div class="field">
+              <label for="cmpLng">Longitude</label>
+              <input id="cmpLng" type="text" inputmode="decimal" autocomplete="off"/>
+            </div>
+          </div>
+          <div class="row3">
+            <div class="field">
+              <label for="cmpGridSize">Grid</label>
+              <select id="cmpGridSize">
+                <option value="3">3 × 3</option>
+                <option value="5">5 × 5</option>
+                <option value="7" selected>7 × 7</option>
+                <option value="9">9 × 9</option>
+                <option value="11">11 × 11</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="cmpSpacing">Spacing (km)</label>
+              <input id="cmpSpacing" type="text" inputmode="decimal" value="1.5" autocomplete="off"/>
+            </div>
+            <div class="field">
+              <label for="cmpSurface">Surface</label>
+              <select id="cmpSurface">
+                <option value="local" selected>Local finder</option>
+                <option value="web">Web SERP</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="cmpRegion">Region &amp; language</label>
+            <select id="cmpRegion"></select>
+          </div>
+          <div class="hint" style="margin-bottom:10px;">Uses the same data provider, API credentials, match strictness, and sponsored-results setting configured above.</div>
+          <button class="go" id="cmpAutoBtn">Compare all GBPs automatically →</button>
+          <button class="btn-secondary" id="cmpStopBtn" type="button" style="width:100%; margin-top:8px;" disabled>Stop comparison</button>
+          <button class="btn-secondary" id="cmpBuildBtn" type="button" style="width:100%; margin-top:8px;">Build grid for manual paste mode</button>
+          <div class="scan-status" id="cmpStatus"></div>
+          <div class="field" style="margin-top:14px;">
+            <label for="cmpHistorySelect">Comparison history</label>
+            <select id="cmpHistorySelect"></select>
+          </div>
+        </details>
       </div>
 
       <div class="col-map">
@@ -673,6 +740,48 @@
               <tr><th>Business</th><th class="num">Seen at</th><th class="num">Avg pos</th><th class="num">#1 spots</th><th class="num">Top-3 spots</th></tr>
             </thead>
             <tbody id="compBody"></tbody>
+          </table>
+        </div>
+
+        <hr class="divider" style="margin:26px 0;"/>
+        <h4 style="margin:0 0 12px; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;">GBP comparison — best rank per point, across all GBPs in this client</h4>
+        <div id="cmpMap" style="height:360px; width:100%; border:1px solid var(--paper-line); border-radius:14px; box-shadow:var(--shadow-md); overflow:hidden; background:var(--paper-3);"></div>
+        <div class="legend">
+          <span><i style="background:var(--rank-good)"></i> best GBP ranks 1–3 here</span>
+          <span><i style="background:var(--rank-mid)"></i> best GBP ranks 4–10</span>
+          <span><i style="background:var(--rank-bad)"></i> best GBP ranks 11–20</span>
+          <span><i style="background:var(--rank-lost)"></i> none of your GBPs found</span>
+          <span><i style="background:var(--rank-none)"></i> not scanned yet</span>
+        </div>
+        <div class="scan-status" id="cmpMapStatus"></div>
+
+        <!-- Assisted paste-scan for GBP comparison -->
+        <div class="assist" id="cmpAssistPanel" style="display:none;">
+          <div class="point-line" id="cmpAssistPoint">Point — of —</div>
+          <div class="hint" style="margin:0 0 10px;">
+            Same loop as the single-GBP paste mode above: open the point, <b>Ctrl+A</b> · <b>Ctrl+C</b>
+            on the Google tab, then <b>Ctrl+V</b> anywhere on this page. Every saved GBP in this client
+            is checked against what you paste, all at once.
+          </div>
+          <div class="row-btns">
+            <button class="btn-secondary" id="cmpOpenPointBtn" type="button">Open point ↗</button>
+            <button class="chip-btn" id="cmpSkipPointBtn" type="button">Skip point</button>
+          </div>
+          <label for="cmpPasteBox" style="margin-top:12px;">Paste target — Ctrl+V anywhere on the page lands here</label>
+          <textarea id="cmpPasteBox" placeholder="Ctrl+V the copied Google page…"></textarea>
+          <div class="row-btns">
+            <button class="chip-btn" id="cmpParseBtn" type="button">Scan pasted results</button>
+          </div>
+          <div class="scan-status" id="cmpParseStatus"></div>
+        </div>
+
+        <div class="comp-wrap" id="cmpResultsWrap" style="display:none;">
+          <h4>Which GBPs show up for “<span id="cmpResultsKeyword"></span>” in this area</h4>
+          <table class="comp">
+            <thead>
+              <tr><th>GBP</th><th class="num">Found</th><th class="num">Top-3</th><th class="num">Avg rank</th><th>Best point</th></tr>
+            </thead>
+            <tbody id="cmpResultsBody"></tbody>
           </table>
         </div>
       </div>
@@ -907,9 +1016,11 @@ function fillRegionSelect(sel){
 const regionSelect = document.getElementById('region');
 const tRegionSelect = document.getElementById('tRegion');
 const kwRegionSelect = document.getElementById('kwRegion');
+const cmpRegionSelect = document.getElementById('cmpRegion');
 fillRegionSelect(regionSelect);
 fillRegionSelect(tRegionSelect);
 fillRegionSelect(kwRegionSelect);
+fillRegionSelect(cmpRegionSelect);
 
 /* ---------- UULE encoding (standard base64: keep + / = intact) ---------- */
 function bytesToBase64(bytes){
@@ -973,7 +1084,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
-    if (tab.dataset.tab === 'tracker'){ setTimeout(() => map.invalidateSize(), 60); }
+    if (tab.dataset.tab === 'tracker'){ setTimeout(() => { map.invalidateSize(); if (typeof cmpMap !== 'undefined') cmpMap.invalidateSize(); }, 60); }
   });
 });
 
@@ -1147,6 +1258,7 @@ function migrateClient(c){
       c.activeGbpId = c.gbps.length ? c.gbps[0].id : null;
     }
   }
+  if (!Array.isArray(c.compareScans)) c.compareScans = [];
   return c;
 }
 function saveState(){
@@ -1371,7 +1483,7 @@ document.getElementById('addClientBtn').addEventListener('click', () => {
     regionIdx: 0, gridSize: 7, spacingKm: 1.5, surface: 'local',
     keywords: [], activeKeywordId: null
   };
-  const c = { id: uid(), name, gbps: [gbp], activeGbpId: gbp.id };
+  const c = { id: uid(), name, gbps: [gbp], activeGbpId: gbp.id, compareScans: [] };
   state.clients.push(c);
   state.activeClientId = c.id;
   document.getElementById('newClientName').value = '';
@@ -1460,6 +1572,9 @@ function loadClientIntoForm(){
   const kw = activeKeyword();
   drawScan(kw && kw.scans.length ? kw.scans[kw.scans.length-1] : null);
   recenterMap();
+  const c = activeClient();
+  renderCmpHistory();
+  drawCompareScan(c && c.compareScans.length ? c.compareScans[c.compareScans.length - 1] : null);
 }
 function persistClientFields(){
   const g = activeGbp();
@@ -1515,6 +1630,30 @@ tGeocodeBtn.addEventListener('click', async () => {
     setTGeoStatus('Geocoding failed (' + err.message + ').', 'err');
   } finally {
     tGeocodeBtn.disabled = false;
+  }
+});
+
+const cmpGeocodeBtn = document.getElementById('cmpGeocodeBtn');
+const cmpGeoStatus = document.getElementById('cmpGeoStatus');
+function setCmpGeoStatus(msg, kind){
+  cmpGeoStatus.textContent = msg;
+  cmpGeoStatus.className = 'geocode-status' + (kind ? ' ' + kind : '');
+}
+cmpGeocodeBtn.addEventListener('click', async () => {
+  const q = document.getElementById('cmpLoc').value.trim();
+  if (!q){ setCmpGeoStatus('Enter an address or place first.', 'err'); return; }
+  cmpGeocodeBtn.disabled = true;
+  setCmpGeoStatus('Looking up “' + q + '”…', '');
+  try{
+    const hit = await nominatim(q);
+    if (!hit){ setCmpGeoStatus('No match found. Add city / province to the query.', 'err'); return; }
+    document.getElementById('cmpLat').value = parseFloat(hit.lat).toFixed(7);
+    document.getElementById('cmpLng').value = parseFloat(hit.lon).toFixed(7);
+    setCmpGeoStatus('✓ ' + hit.display_name, 'ok');
+  } catch(err){
+    setCmpGeoStatus('Geocoding failed (' + err.message + ').', 'err');
+  } finally {
+    cmpGeocodeBtn.disabled = false;
   }
 });
 
@@ -1618,6 +1757,23 @@ function recenterMap(){
     map.setView([g.center.lat, g.center.lng], 12);
     if (centerMarker) centerMarker.remove();
     centerMarker = L.marker([g.center.lat, g.center.lng], { title: g.bizName || g.name }).addTo(map);
+  }
+}
+
+/* ---------- Second map: GBP comparison ---------- */
+const cmpMap = L.map('cmpMap', { zoomControl: true }).setView([52.2690628, -113.8141464], 12);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(cmpMap);
+let cmpDotLayer = L.layerGroup().addTo(cmpMap);
+let cmpCenterMarker = null;
+let cmpLiveMarkers = [];
+function recenterCmpMap(scan){
+  if (scan && scan.center && scan.center.lat != null && scan.center.lng != null){
+    cmpMap.setView([scan.center.lat, scan.center.lng], 12);
+    if (cmpCenterMarker) cmpCenterMarker.remove();
+    cmpCenterMarker = L.marker([scan.center.lat, scan.center.lng], { title: scan.keyword }).addTo(cmpMap);
   }
 }
 function rankClass(rank){
@@ -1822,6 +1978,7 @@ function dotPopup(p, idx, scan){
     const prev = currentIdx;
     currentScan = scan;
     currentIdx = idx;
+    lastAssistFocused = 'single';
     refreshCurrentHighlight(prev);
     updateAssistPanel();
     map.closePopup();
@@ -2544,8 +2701,10 @@ function updateAssistPanel(){
     document.getElementById('skipPointBtn').disabled = false;
   }
 }
+let lastAssistFocused = null; // 'single' | 'compare' — disambiguates a global paste if both loops are pending
 document.getElementById('openPointBtn').addEventListener('click', () => {
   if (!currentScan || currentIdx == null) return;
+  lastAssistFocused = 'single';
   window.open(currentScan.points[currentIdx].url, '_blank', 'noopener');
 });
 document.getElementById('skipPointBtn').addEventListener('click', () => {
@@ -2563,6 +2722,7 @@ document.getElementById('skipPointBtn').addEventListener('click', () => {
 document.addEventListener('paste', (e) => {
   if (!document.getElementById('panel-tracker').classList.contains('active')) return;
   if (!currentScan || currentIdx == null) return;
+  if (currentCompareScan && currentCompareIdx != null && lastAssistFocused === 'compare') return;
   const t = e.target;
   const isOtherField = t && ((t.tagName === 'INPUT') ||
     (t.tagName === 'TEXTAREA' && t.id !== 'pasteBox') || t.isContentEditable);
@@ -2962,7 +3122,7 @@ document.getElementById('kwSendBtn').addEventListener('click', async () => {
   // Reuse an existing client (folder) with the same name, or create a new one.
   let c = state.clients.find(x => normName(x.name) === normName(bizName));
   if (!c){
-    c = { id: uid(), name: bizName, gbps: [], activeGbpId: null };
+    c = { id: uid(), name: bizName, gbps: [], activeGbpId: null, compareScans: [] };
     state.clients.push(c);
   }
   // Within that client, reuse a GBP profile with a matching business name,
@@ -3027,6 +3187,575 @@ document.getElementById('kwSendBtn').addEventListener('click', async () => {
 });
 
 
+/* =========================================================================
+   COMPARE ALL GBPs — one keyword, one area, checked against every GBP
+   saved under the active client, so you can see at a glance which of your
+   listings show up in that area and which don't. Reuses the same grid
+   geometry, providers, and match logic (identifyMatch) as the single-GBP
+   tracker above, just applied per-point against a list of GBPs instead of
+   just the currently active one.
+   ========================================================================= */
+let currentCompareScan = null;
+let currentCompareIdx = null;
+
+function nextUnscannedCompare(scan, from){
+  if (!scan) return null;
+  const start = from == null ? 0 : from;
+  for (let i = start; i < scan.points.length; i++){
+    if (!scan.points[i].results) return i;
+  }
+  for (let i = 0; i < start; i++){
+    if (!scan.points[i].results) return i;
+  }
+  return null;
+}
+
+function bestRankAtPoint(point, gbps){
+  if (!point.results) return null;
+  let best = null;
+  gbps.forEach(g => {
+    const r = point.results[g.id];
+    if (!r || !(r.rank >= 1)) return;
+    if (!best || r.rank < best.rank) best = { rank: r.rank, gbpId: g.id, matched: r.matched, matchConfidence: r.matchConfidence, matchedViaAd: r.matchedViaAd };
+  });
+  return best;
+}
+function cmpRankClass(point, gbps){
+  if (!point.results) return 'none';
+  const best = bestRankAtPoint(point, gbps);
+  if (!best) return 'lost';
+  return rankClass(best.rank);
+}
+function cmpRankLabel(point, gbps){
+  if (!point.results) return '·';
+  const best = bestRankAtPoint(point, gbps);
+  return best ? String(best.rank) : '20+';
+}
+
+function drawCompareScan(scan){
+  cmpDotLayer.clearLayers();
+  cmpLiveMarkers = [];
+  currentCompareScan = scan || null;
+  currentCompareIdx = scan ? nextUnscannedCompare(scan, 0) : null;
+  updateCmpStatus(scan);
+  renderCompareResults(scan);
+  updateCmpAssistPanel();
+  if (!scan) return;
+  const c = activeClient();
+  const gbps = c ? c.gbps : [];
+  scan.points.forEach((p, idx) => addCompareDot(p, idx, scan, gbps));
+  recenterCmpMap(scan);
+}
+function addCompareDot(p, idx, scan, gbps){
+  const cur = (scan === currentCompareScan && idx === currentCompareIdx) ? ' current' : '';
+  const failed = (!p.results && p.error) ? ' failed' : '';
+  const label = failed ? '!' : cmpRankLabel(p, gbps);
+  const icon = L.divIcon({
+    className: '',
+    html: '<div class="rank-dot ' + cmpRankClass(p, gbps) + cur + failed + '" id="cmp-dot-' + idx + '">' + label + '</div>',
+    iconSize: [34, 34], iconAnchor: [17, 17]
+  });
+  const m = L.marker([p.lat, p.lng], { icon }).addTo(cmpDotLayer);
+  m.bindPopup(() => cmpDotPopup(p, idx, scan, gbps));
+  cmpLiveMarkers[idx] = m;
+}
+function refreshCmpDot(idx){
+  if (!currentCompareScan) return;
+  const c = activeClient();
+  const gbps = c ? c.gbps : [];
+  if (cmpLiveMarkers[idx]) cmpDotLayer.removeLayer(cmpLiveMarkers[idx]);
+  addCompareDot(currentCompareScan.points[idx], idx, currentCompareScan, gbps);
+}
+function cmpDotPopup(p, idx, scan, gbps){
+  const div = document.createElement('div');
+  const title = document.createElement('div');
+  title.className = 'pop-title';
+  title.textContent = 'Point ' + (p.row + 1) + '×' + (p.col + 1);
+  div.appendChild(title);
+
+  if (p.error && !p.results){
+    const errline = document.createElement('div');
+    errline.textContent = 'Scan failed here: ' + p.error;
+    errline.style.color = '#b23b2e';
+    div.appendChild(errline);
+  } else if (p.results){
+    const table = document.createElement('table');
+    table.style.cssText = 'width:100%; border-collapse:collapse; margin-top:4px;';
+    gbps.forEach(g => {
+      const r = p.results[g.id] || {};
+      const tr = document.createElement('tr');
+      const tdName = document.createElement('td');
+      tdName.textContent = g.name || g.bizName;
+      tdName.style.cssText = 'padding:2px 8px 2px 0;';
+      const tdRank = document.createElement('td');
+      tdRank.style.cssText = 'padding:2px 0; text-align:right; font-weight:700;';
+      if (r.rank >= 1){
+        tdRank.textContent = '#' + r.rank + (r.matchedViaAd ? ' (ad)' : '');
+        tdRank.style.color = r.rank <= 3 ? 'var(--rank-good)' : (r.rank <= 10 ? 'var(--rank-mid)' : 'var(--rank-bad)');
+      } else {
+        tdRank.textContent = 'not found';
+        tdRank.style.color = 'var(--ink-faint)';
+      }
+      tr.appendChild(tdName); tr.appendChild(tdRank);
+      table.appendChild(tr);
+    });
+    div.appendChild(table);
+  } else {
+    const notyet = document.createElement('div');
+    notyet.textContent = 'Not yet scanned.';
+    notyet.style.color = 'var(--ink-faint)';
+    div.appendChild(notyet);
+  }
+
+  const coords = document.createElement('div');
+  coords.textContent = p.lat.toFixed(5) + ', ' + p.lng.toFixed(5);
+  coords.style.cssText = 'color:var(--ink-faint); margin-top:6px;';
+  div.appendChild(coords);
+
+  const l1 = document.createElement('div');
+  const a1 = document.createElement('a');
+  a1.href = p.url; a1.target = '_blank'; a1.rel = 'noopener';
+  a1.textContent = '↗ Open the exact search for this point';
+  l1.appendChild(a1); div.appendChild(l1);
+
+  const retryHere = document.createElement('button');
+  retryHere.className = 'chip-btn';
+  retryHere.textContent = 'Retry this point automatically';
+  retryHere.style.marginTop = '6px';
+  retryHere.addEventListener('click', async () => {
+    retryHere.disabled = true; retryHere.textContent = 'Checking…';
+    try{ await retryCompareSinglePoint(scan, idx); } finally { cmpMap.closePopup(); }
+  });
+  div.appendChild(retryHere);
+
+  const scanHere = document.createElement('button');
+  scanHere.className = 'chip-btn';
+  scanHere.textContent = 'Paste results for this dot';
+  scanHere.style.cssText = 'margin-top:6px; margin-left:6px;';
+  scanHere.addEventListener('click', () => {
+    currentCompareScan = scan;
+    currentCompareIdx = idx;
+    lastAssistFocused = 'compare';
+    refreshCmpDot(idx);
+    updateCmpAssistPanel();
+    cmpMap.closePopup();
+    const box = document.getElementById('cmpPasteBox');
+    box.focus();
+    box.scrollIntoView({ behavior:'smooth', block:'center' });
+  });
+  div.appendChild(scanHere);
+  return div;
+}
+
+function updateCmpStatus(scan){
+  const el = document.getElementById('cmpMapStatus');
+  if (!scan){ el.textContent = ''; el.className = 'scan-status'; return; }
+  const total = scan.points.length;
+  const done = scan.points.filter(p => p.results || p.error).length;
+  if (!done){
+    el.textContent = 'No data yet for this comparison grid.';
+    el.className = 'scan-status err';
+  } else if (done < total){
+    el.textContent = done + ' of ' + total + ' points scanned.';
+    el.className = 'scan-status';
+  } else {
+    el.textContent = 'All ' + total + ' points scanned ✓';
+    el.className = 'scan-status ok';
+  }
+}
+
+function renderCompareResults(scan){
+  const wrap = document.getElementById('cmpResultsWrap');
+  const body = document.getElementById('cmpResultsBody');
+  const kwLabel = document.getElementById('cmpResultsKeyword');
+  const c = activeClient();
+  if (!scan || !c || !c.gbps.length){ wrap.style.display = 'none'; return; }
+  const scanned = scan.points.filter(p => p.results);
+  if (!scanned.length){ wrap.style.display = 'none'; return; }
+
+  kwLabel.textContent = scan.keyword;
+  const rows = c.gbps.map(g => {
+    let found = 0, top3 = 0, rankSum = 0, rankCount = 0, best = null;
+    scanned.forEach(p => {
+      const r = p.results[g.id];
+      if (!r || !(r.rank >= 1)) return;
+      found++;
+      rankSum += r.rank; rankCount++;
+      if (r.rank <= 3) top3++;
+      if (!best || r.rank < best) best = r.rank;
+    });
+    return {
+      name: g.name || g.bizName || 'Unnamed GBP',
+      found, total: scanned.length, top3,
+      avg: rankCount ? (rankSum / rankCount) : null,
+      best
+    };
+  }).sort((a, b) => b.found - a.found || (a.avg == null ? 999 : a.avg) - (b.avg == null ? 999 : b.avg));
+
+  body.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + escapeHtml(r.name) + '</td>' +
+      '<td class="num">' + r.found + '/' + r.total + '</td>' +
+      '<td class="num">' + r.top3 + '</td>' +
+      '<td class="num">' + (r.avg != null ? r.avg.toFixed(1) : '—') + '</td>' +
+      '<td>' + (r.best != null ? '#' + r.best : '— not found anywhere in this area —') + '</td>';
+    body.appendChild(tr);
+  });
+  wrap.style.display = 'block';
+}
+
+const cmpAutoBtn = document.getElementById('cmpAutoBtn');
+const cmpStopBtn = document.getElementById('cmpStopBtn');
+let cmpAutoStop = false;
+
+function createCompareScan(){
+  const c = activeClient();
+  const keyword = document.getElementById('cmpKeyword').value.trim();
+  const lat = parseFloat(document.getElementById('cmpLat').value);
+  const lng = parseFloat(document.getElementById('cmpLng').value);
+  const gridSize = parseInt(document.getElementById('cmpGridSize').value, 10);
+  const spacingKm = parseFloat(document.getElementById('cmpSpacing').value) || 1.5;
+  const surface = document.getElementById('cmpSurface').value;
+  const regionIdx = parseInt(cmpRegionSelect.value, 10) || 0;
+
+  if (!c){ setCmpStatus('Add and select a client first.', 'err'); return null; }
+  if (!c.gbps.some(g => g.bizName)){ setCmpStatus('At least one GBP in this client needs a business name — fill that in above first.', 'err'); return null; }
+  if (!keyword){ setCmpStatus('Enter a keyword to compare.', 'err'); return null; }
+  if (isNaN(lat) || isNaN(lng)){ setCmpStatus('Set the area to test (geocode the address or enter lat/lng).', 'err'); return null; }
+
+  const region = REGIONS[regionIdx] || REGIONS[0];
+  const opts = { hl: region.hl, gl: region.gl, surface };
+  const pts = gridPoints(lat, lng, gridSize, spacingKm).map(p => ({
+    ...p, results: null, error: null, sparse: false, names: [], adNames: [],
+    url: buildScanUrl(keyword, p.lat, p.lng, opts),
+    mapsUrl: mapsUrl(keyword, p.lat, p.lng, region.hl)
+  }));
+  const scan = {
+    id: uid(), ts: Date.now(), keyword,
+    grid: { rows: gridSize, spacingKm }, surface, region: region.label,
+    center: { lat, lng }, points: pts
+  };
+  c.compareScans.push(scan);
+  saveState(); renderCmpHistory();
+  drawCompareScan(scan);
+  return scan;
+}
+
+function setCmpStatus(msg, kind){
+  const el = document.getElementById('cmpStatus');
+  el.textContent = msg;
+  el.className = 'scan-status' + (kind ? ' ' + kind : '');
+}
+
+document.getElementById('cmpBuildBtn').addEventListener('click', () => {
+  const scan = createCompareScan();
+  if (!scan) return;
+  setCmpStatus('Grid built in manual mode — ' + scan.points.length + ' points. The paste loop is below the comparison map.', 'ok');
+  setTimeout(() => {
+    document.getElementById('cmpAssistPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+});
+
+cmpAutoBtn.addEventListener('click', async () => {
+  const prov = state.settings.provider || 'dataforseo';
+  if (prov === 'serper' && !(state.settings.serperKey || '').trim()){
+    setCmpStatus('Serper mode needs an API key — set it in the automatic-scanning section above.', 'err'); return;
+  }
+  if (prov === 'dataforseo' && (!(state.settings.dfsLogin || '').trim() || !(state.settings.dfsPassword || '').trim())){
+    setCmpStatus('DataForSEO needs both the API login and password — set them in the automatic-scanning section above.', 'err'); return;
+  }
+  const scan = createCompareScan();
+  if (!scan) return;
+  await runCompareAutoScan(scan);
+});
+cmpStopBtn.addEventListener('click', () => { cmpAutoStop = true; });
+
+async function runCompareAutoScan(scan){
+  const c = activeClient();
+  const gbps = c.gbps;
+  const region = REGIONS[parseInt(cmpRegionSelect.value, 10) || 0] || REGIONS[0];
+  const surface = scan.surface;
+  const strict = (state.settings.strictMatch === 'strict');
+  const includeAds = state.settings.includeAds !== false;
+  cmpAutoStop = false;
+  cmpAutoBtn.disabled = true; cmpStopBtn.disabled = false;
+
+  const total = scan.points.length;
+  const isDirect = (state.settings.provider === 'direct');
+  const stepDelay = isDirect ? 1500 : 350;
+  let fatalHit = false;
+
+  async function scanOne(i, attempts){
+    const p = scan.points[i];
+    const el = document.getElementById('cmp-dot-' + i);
+    if (el) el.textContent = '…';
+    let lastErr = null;
+    for (let a = 0; a < attempts; a++){
+      if (cmpAutoStop) return false;
+      try{
+        const listings = await providerQuery(scan.keyword, p, region, surface);
+        applyCompareListings(p, listings, gbps, strict, includeAds);
+        p.error = null;
+        refreshCmpDot(i);
+        return true;
+      } catch (err){
+        lastErr = err;
+        if (err.fatal){ fatalHit = true; p.error = err.message; refreshCmpDot(i); return false; }
+        if (a < attempts - 1) await sleep(Math.round(stepDelay * 0.6));
+      }
+    }
+    p.error = lastErr ? lastErr.message : 'unknown error';
+    refreshCmpDot(i);
+    return false;
+  }
+
+  let consecutiveFails = 0;
+  for (let i = 0; i < total; i++){
+    if (cmpAutoStop){
+      setCmpStatus('Stopped at point ' + i + '/' + total + ' — results so far are saved.', '');
+      break;
+    }
+    setCmpStatus('Comparing point ' + (i + 1) + '/' + total + '…', '');
+    const ok = await scanOne(i, 2);
+    if (fatalHit){ setCmpStatus('Comparison aborted at point ' + (i + 1) + ': ' + scan.points[i].error, 'err'); break; }
+    consecutiveFails = ok ? 0 : consecutiveFails + 1;
+    if (consecutiveFails >= 5){
+      setCmpStatus('Paused after 5 consecutive failures (' + scan.points[i].error + '). Check the connection/credentials and re-run.', 'err');
+      break;
+    }
+    updateCmpStatus(scan); renderCompareResults(scan); saveState();
+    await sleep(stepDelay);
+  }
+
+  cmpAutoBtn.disabled = false; cmpStopBtn.disabled = true;
+  currentCompareIdx = nextUnscannedCompare(scan, 0);
+  updateCmpAssistPanel();
+  renderCmpHistory();
+  const done = scan.points.filter(p => p.results).length;
+  if (!cmpAutoStop && !fatalHit){
+    setCmpStatus(done === total
+      ? 'Comparison complete ✓ — ' + total + ' points checked against ' + gbps.length + ' GBP(s).'
+      : done + '/' + total + ' points completed; the rest failed repeatedly — retry from a dot\u2019s popup or paste them manually.',
+      done === total ? 'ok' : '');
+  }
+}
+
+/* Identify every saved GBP's rank at one point, reusing the same
+   organic/ads split and identifyMatch signal priority (CID > phone >
+   exact > fuzzy) as the single-GBP tracker. */
+function applyCompareListings(p, results, gbps, strict, includeAds){
+  const organic = (results && results.organic) || [];
+  const ads = (results && results.ads) || [];
+  p.names = organic.map(l => l.title).slice(0, 25);
+  p.adNames = ads.map(l => l.title).slice(0, 25);
+  p.sparse = organic.length < SPARSE_THRESHOLD;
+  p.results = {};
+  gbps.forEach(g => {
+    let rank = 0, matched = null, adRank = null, adMatched = null, matchConfidence = null, matchedViaAd = false;
+    for (let i = 0; i < organic.length; i++){
+      const conf = identifyMatch(organic[i], g, strict);
+      if (conf){ rank = i + 1; matched = organic[i].title; matchConfidence = conf; break; }
+    }
+    for (let i = 0; i < ads.length; i++){
+      const conf = identifyMatch(ads[i], g, strict);
+      if (conf){
+        adRank = i + 1; adMatched = ads[i].title;
+        if (rank === 0 && includeAds){
+          rank = organic.length + i + 1; matched = ads[i].title; matchConfidence = conf; matchedViaAd = true;
+        }
+        break;
+      }
+    }
+    p.results[g.id] = { rank, matched, adRank, adMatched, matchConfidence, matchedViaAd };
+  });
+}
+
+async function retryCompareSinglePoint(scan, idx){
+  const c = activeClient();
+  if (!c) return;
+  const region = REGIONS[parseInt(cmpRegionSelect.value, 10) || 0] || REGIONS[0];
+  const strict = (state.settings.strictMatch === 'strict');
+  const includeAds = state.settings.includeAds !== false;
+  const p = scan.points[idx];
+  const el = document.getElementById('cmp-dot-' + idx);
+  if (el) el.textContent = '…';
+  try{
+    const listings = await providerQuery(scan.keyword, p, region, scan.surface);
+    applyCompareListings(p, listings, c.gbps, strict, includeAds);
+    p.error = null;
+  } catch (err){
+    p.error = err.message;
+  }
+  refreshCmpDot(idx);
+  updateCmpStatus(scan); renderCompareResults(scan); saveState();
+}
+
+/* ---------- Compare history ---------- */
+const cmpHistorySelect = document.getElementById('cmpHistorySelect');
+function renderCmpHistory(){
+  cmpHistorySelect.innerHTML = '';
+  const c = activeClient();
+  if (!c || !c.compareScans.length){
+    const opt = document.createElement('option');
+    opt.textContent = '— no comparisons yet —'; opt.value = '';
+    cmpHistorySelect.appendChild(opt);
+    return;
+  }
+  c.compareScans.slice().reverse().forEach((s, revIdx) => {
+    const idx = c.compareScans.length - 1 - revIdx;
+    const opt = document.createElement('option');
+    opt.value = idx;
+    const d = new Date(s.ts);
+    const done = s.points.filter(p => p.results).length;
+    opt.textContent = d.toLocaleString() + ' · “' + s.keyword + '” · ' + s.grid.rows + '×' + s.grid.rows +
+      ' · ' + done + '/' + s.points.length + ' scanned';
+    cmpHistorySelect.appendChild(opt);
+  });
+  cmpHistorySelect.value = String(c.compareScans.length - 1);
+}
+cmpHistorySelect.addEventListener('change', () => {
+  const c = activeClient();
+  if (!c) return;
+  const idx = parseInt(cmpHistorySelect.value, 10);
+  if (!isNaN(idx) && c.compareScans[idx]) drawCompareScan(c.compareScans[idx]);
+});
+
+/* ---------- Compare: assisted paste-scan ---------- */
+const cmpAssistPanel = document.getElementById('cmpAssistPanel');
+const cmpAssistPoint = document.getElementById('cmpAssistPoint');
+const cmpPasteBox = document.getElementById('cmpPasteBox');
+function setCmpParseStatus(msg, kind){
+  const el = document.getElementById('cmpParseStatus');
+  el.textContent = msg;
+  el.className = 'scan-status' + (kind ? ' ' + kind : '');
+}
+function updateCmpAssistPanel(){
+  if (!currentCompareScan){ cmpAssistPanel.style.display = 'none'; return; }
+  cmpAssistPanel.style.display = 'block';
+  const total = currentCompareScan.points.length;
+  const done = currentCompareScan.points.filter(p => p.results).length;
+  const openBtn = document.getElementById('cmpOpenPointBtn');
+  if (currentCompareIdx == null){
+    cmpAssistPoint.textContent = 'All ' + total + ' points scanned ✓';
+    openBtn.textContent = 'Open point ↗'; openBtn.disabled = true;
+    document.getElementById('cmpSkipPointBtn').disabled = true;
+  } else {
+    const p = currentCompareScan.points[currentCompareIdx];
+    cmpAssistPoint.textContent = 'Point ' + (currentCompareIdx + 1) + ' of ' + total +
+      ' (row ' + (p.row + 1) + ', col ' + (p.col + 1) + ') · ' + done + ' done';
+    openBtn.textContent = 'Open point ' + (currentCompareIdx + 1) + ' ↗'; openBtn.disabled = false;
+    document.getElementById('cmpSkipPointBtn').disabled = false;
+  }
+}
+document.getElementById('cmpOpenPointBtn').addEventListener('click', () => {
+  if (!currentCompareScan || currentCompareIdx == null) return;
+  lastAssistFocused = 'compare';
+  window.open(currentCompareScan.points[currentCompareIdx].url, '_blank', 'noopener');
+});
+document.getElementById('cmpSkipPointBtn').addEventListener('click', () => {
+  if (!currentCompareScan || currentCompareIdx == null) return;
+  const prev = currentCompareIdx;
+  currentCompareIdx = nextUnscannedCompare(currentCompareScan, currentCompareIdx + 1);
+  if (currentCompareIdx === prev) currentCompareIdx = null;
+  refreshCmpDot(prev);
+  if (currentCompareIdx != null) refreshCmpDot(currentCompareIdx);
+  updateCmpAssistPanel();
+});
+document.getElementById('cmpParseBtn').addEventListener('click', () => runCmpParse(true));
+
+function runCmpParse(fromGesture){
+  if (!currentCompareScan){ setCmpParseStatus('Build a comparison grid first.', 'err'); return; }
+  if (currentCompareIdx == null){ setCmpParseStatus('All points are scanned — pick a dot on the map to re-scan it.', 'err'); return; }
+  const text = cmpPasteBox.value;
+  if (!text.trim()){ setCmpParseStatus('Nothing pasted yet.', 'err'); return; }
+  const c = activeClient();
+  if (!c){ setCmpParseStatus('Select a client first.', 'err'); return; }
+  const includeAds = document.getElementById('includeAds').checked;
+  const parsed = parsePastedResults(text, '', includeAds); // bizName '' — we match all GBPs ourselves below
+
+  if (!parsed.entries.length){
+    setCmpParseStatus('No listings recognized in that paste. Make sure you copied the whole Google results page (Ctrl+A first).', 'err');
+    return;
+  }
+
+  const p = currentCompareScan.points[currentCompareIdx];
+  const match = matchGbpsAgainstEntries(parsed.entries, c.gbps, includeAds);
+  p.results = match.perGbp;
+  p.names = match.organicNames.slice(0, 25);
+  p.adNames = match.adNames.slice(0, 25);
+  p.error = null;
+  saveState();
+
+  const prev = currentCompareIdx;
+  currentCompareIdx = nextUnscannedCompare(currentCompareScan, currentCompareIdx + 1);
+  refreshCmpDot(prev);
+  if (currentCompareIdx != null) refreshCmpDot(currentCompareIdx);
+  updateCmpStatus(currentCompareScan);
+  renderCompareResults(currentCompareScan);
+  renderCmpHistory();
+  updateCmpAssistPanel();
+  cmpPasteBox.value = '';
+
+  const foundCount = c.gbps.filter(g => match.perGbp[g.id] && match.perGbp[g.id].rank >= 1).length;
+  let msg = parsed.entries.length + ' listings read. ' + foundCount + ' of ' + c.gbps.length + ' GBP(s) found here.';
+  if (currentCompareIdx != null){
+    msg += ' Next: point ' + (currentCompareIdx + 1) + '.';
+    if (fromGesture && document.getElementById('autoOpen').checked){
+      window.open(currentCompareScan.points[currentCompareIdx].url, '_blank', 'noopener');
+      msg += ' Its search just opened.';
+    }
+  } else {
+    msg += ' Grid complete ✓';
+  }
+  setCmpParseStatus(msg, foundCount ? 'ok' : '');
+}
+
+/* Multiplexes the single-target matching logic from parsePastedResults
+   across several GBPs at once, using name-only matching (the pasted page
+   doesn't carry phone/CID data) — same fidelity as single-GBP paste mode. */
+function matchGbpsAgainstEntries(entries, gbps, includeAds){
+  const perGbp = {};
+  gbps.forEach(g => { perGbp[g.id] = { rank: 0, matched: null, adRank: null, adMatched: null, matchConfidence: null, matchedViaAd: false }; });
+  const organicNames = [], adNames = [];
+  let organicPos = 0, adPos = 0;
+  entries.forEach(e => {
+    if (!e.ad){ organicPos++; organicNames.push(e.name); } else { adPos++; adNames.push(e.name); }
+    gbps.forEach(g => {
+      if (!g.bizName) return;
+      const rec = perGbp[g.id];
+      if (!nameMatches(e.name, g.bizName)) return;
+      if (e.ad){
+        if (rec.adRank == null){ rec.adRank = adPos; rec.adMatched = e.name; }
+        if (includeAds && rec.rank === 0){ rec.rank = organicPos + adPos; rec.matched = e.name; rec.matchConfidence = 'fuzzy'; rec.matchedViaAd = true; }
+      } else if (rec.rank === 0){
+        rec.rank = organicPos; rec.matched = e.name; rec.matchConfidence = 'fuzzy';
+      }
+    });
+  });
+  return { perGbp, organicNames, adNames };
+}
+
+/* Route a global Ctrl+V to whichever assist panel (single-GBP or compare)
+   is currently active, so both loops can share the same "paste anywhere"
+   convenience without stepping on each other. */
+document.addEventListener('paste', (e) => {
+  if (!document.getElementById('panel-tracker').classList.contains('active')) return;
+  if (!currentCompareScan || currentCompareIdx == null) return;
+  if (currentScan && currentIdx != null && lastAssistFocused === 'single') return;
+  const t = e.target;
+  const isOtherField = t && ((t.tagName === 'INPUT') ||
+    (t.tagName === 'TEXTAREA' && t.id !== 'cmpPasteBox') || t.isContentEditable);
+  if (isOtherField) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+  if (!text.trim()) return;
+  e.preventDefault();
+  cmpPasteBox.value = text;
+  runCmpParse(true);
+});
+
+/* ---------- Export / import ---------- */
 document.getElementById('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
