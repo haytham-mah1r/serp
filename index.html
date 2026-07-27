@@ -443,25 +443,6 @@
         <button class="go" id="buildBtn">Build grid for active keyword →</button>
         <div class="scan-status" id="scanStatus"></div>
 
-        <!-- Assisted paste-scan -->
-        <div class="assist" id="assistPanel" style="display:none;">
-          <div class="point-line" id="assistPoint">Point — of —</div>
-          <div class="row-btns">
-            <button class="btn-secondary" id="openPointBtn" type="button">Open this point's search ↗</button>
-            <button class="chip-btn" id="skipPointBtn" type="button">Skip point</button>
-          </div>
-          <label for="pasteBox" style="margin-top:12px;">Paste the results page here — on the Google tab press Ctrl+A, Ctrl+C, then Ctrl+V below</label>
-          <textarea id="pasteBox" placeholder="Paste the whole Google results page…"></textarea>
-          <div class="row-btns">
-            <button class="chip-btn" id="parseBtn" type="button">Scan pasted results</button>
-          </div>
-          <div class="toggle">
-            <input type="checkbox" id="includeAds"/>
-            <label for="includeAds" style="margin:0; text-transform:none; letter-spacing:0; font-size:11px;">Count sponsored results in the rank (off = organic positions only, like rank trackers do)</label>
-          </div>
-          <div class="scan-status" id="parseStatus"></div>
-        </div>
-
         <div class="field" style="margin-top:18px;">
           <label for="historySelect">Scan history (active keyword)</label>
           <select id="historySelect"></select>
@@ -477,11 +458,42 @@
           <span><i style="background:var(--rank-lost)"></i> 21+ / not found</span>
           <span><i style="background:var(--rank-none)"></i> not scanned yet</span>
         </div>
+        <div class="scan-status" id="mapStatus"></div>
+
+        <!-- Assisted paste-scan -->
+        <div class="assist" id="assistPanel" style="display:none;">
+          <div class="point-line" id="assistPoint">Point — of —</div>
+          <div class="hint" style="margin:0 0 10px;">
+            <b>1</b> · Open the point below &nbsp;→&nbsp; <b>2</b> · on the Google tab press
+            <b>Ctrl+A</b> then <b>Ctrl+C</b> &nbsp;→&nbsp; <b>3</b> · come back here and press
+            <b>Ctrl+V</b> — anywhere on this page. The platform reads the paste, ranks the dot,
+            and opens the next point for you automatically.
+          </div>
+          <div class="row-btns">
+            <button class="btn-secondary" id="openPointBtn" type="button">Open point ↗</button>
+            <button class="chip-btn" id="skipPointBtn" type="button">Skip point</button>
+          </div>
+          <label for="pasteBox" style="margin-top:12px;">Paste target — Ctrl+V anywhere on the page lands here</label>
+          <textarea id="pasteBox" placeholder="Ctrl+V the copied Google page…"></textarea>
+          <div class="row-btns">
+            <button class="chip-btn" id="parseBtn" type="button">Scan pasted results</button>
+          </div>
+          <div class="toggle">
+            <input type="checkbox" id="autoOpen" checked/>
+            <label for="autoOpen" style="margin:0; text-transform:none; letter-spacing:0; font-size:11px;">Auto-open the next point after each paste (fast loop: Ctrl+A · Ctrl+C · switch tab · Ctrl+V · repeat)</label>
+          </div>
+          <div class="toggle">
+            <input type="checkbox" id="includeAds"/>
+            <label for="includeAds" style="margin:0; text-transform:none; letter-spacing:0; font-size:11px;">Count sponsored results in the rank (off = organic positions only, like rank trackers do)</label>
+          </div>
+          <div class="scan-status" id="parseStatus"></div>
+        </div>
+
         <div class="summary-strip" id="summaryStrip">
           <div class="stat"><b id="statAvg">—</b><span>avg rank</span></div>
           <div class="stat"><b id="statTop3">—</b><span>in top 3</span></div>
           <div class="stat"><b id="statVis">—</b><span>found</span></div>
-          <div class="stat"><b id="statPts">—</b><span>points</span></div>
+          <div class="stat"><b id="statPts">—</b><span>scanned</span></div>
         </div>
         <div class="verdict" id="verdictBox" style="display:none;"></div>
         <div class="comp-wrap" id="compWrap" style="display:none;">
@@ -1176,15 +1188,32 @@ function dotPopup(p, idx, scan){
 /* ---------- Summary, verdict & competitors ---------- */
 function updateSummary(scan){
   const pts = scan ? scan.points : [];
-  const ranked = pts.filter(p => p.rank != null && p.rank > 0 && p.rank <= 20);
-  const found = ranked.length;
-  const top3 = pts.filter(p => p.rank != null && p.rank >= 1 && p.rank <= 3).length;
+  const scanned = pts.filter(p => p.rank != null);
+  const ranked = scanned.filter(p => p.rank > 0 && p.rank <= 20);
+  const top3 = scanned.filter(p => p.rank >= 1 && p.rank <= 3).length;
   const avg = ranked.length
     ? (ranked.reduce((s,p) => s + p.rank, 0) / ranked.length).toFixed(1) : '—';
   document.getElementById('statAvg').textContent = avg;
-  document.getElementById('statTop3').textContent = pts.length ? top3 + '/' + pts.length : '—';
-  document.getElementById('statVis').textContent = pts.length ? found + '/' + pts.length : '—';
-  document.getElementById('statPts').textContent = pts.length || '—';
+  document.getElementById('statTop3').textContent = scanned.length ? top3 + '/' + scanned.length : '—';
+  document.getElementById('statVis').textContent = scanned.length ? ranked.length + '/' + scanned.length : '—';
+  document.getElementById('statPts').textContent = pts.length ? scanned.length + '/' + pts.length : '—';
+
+  const mapStatus = document.getElementById('mapStatus');
+  if (!scan){
+    mapStatus.textContent = '';
+    mapStatus.className = 'scan-status';
+  } else if (!scanned.length){
+    mapStatus.textContent = 'No data yet — grey dots mean nothing has been pasted for them. ' +
+      'The platform can\u2019t see your Google tab; it only reads what you paste. Use the loop below: ' +
+      'open the point, Ctrl+A · Ctrl+C on Google, Ctrl+V here.';
+    mapStatus.className = 'scan-status err';
+  } else if (scanned.length < pts.length){
+    mapStatus.textContent = scanned.length + ' of ' + pts.length + ' points scanned — keep the loop going below.';
+    mapStatus.className = 'scan-status';
+  } else {
+    mapStatus.textContent = 'All ' + pts.length + ' points scanned ✓';
+    mapStatus.className = 'scan-status ok';
+  }
 }
 
 function renderVerdict(scan){
@@ -1345,7 +1374,10 @@ document.getElementById('buildBtn').addEventListener('click', () => {
   kw.scans.push(scan);
   saveState(); renderHistory(); renderKeywords();
   drawScan(scan);
-  setScanStatus('Grid built — ' + pts.length + ' points. Work through them below: open, copy the page, paste back.', 'ok');
+  setScanStatus('Grid built — ' + pts.length + ' points. The scan loop is next to the map.', 'ok');
+  setTimeout(() => {
+    assistPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
 });
 
 /* ---------- Assisted paste-scan ---------- */
@@ -1363,15 +1395,18 @@ function updateAssistPanel(){
   assistPanel.style.display = 'block';
   const total = currentScan.points.length;
   const done = currentScan.points.filter(p => p.rank != null).length;
+  const openBtn = document.getElementById('openPointBtn');
   if (currentIdx == null){
     assistPoint.textContent = 'All ' + total + ' points scanned ✓';
-    document.getElementById('openPointBtn').disabled = true;
+    openBtn.textContent = 'Open point ↗';
+    openBtn.disabled = true;
     document.getElementById('skipPointBtn').disabled = true;
   } else {
     const p = currentScan.points[currentIdx];
     assistPoint.textContent = 'Point ' + (currentIdx + 1) + ' of ' + total +
       ' (row ' + (p.row + 1) + ', col ' + (p.col + 1) + ') · ' + done + ' done';
-    document.getElementById('openPointBtn').disabled = false;
+    openBtn.textContent = 'Open point ' + (currentIdx + 1) + ' ↗';
+    openBtn.disabled = false;
     document.getElementById('skipPointBtn').disabled = false;
   }
 }
@@ -1388,12 +1423,25 @@ document.getElementById('skipPointBtn').addEventListener('click', () => {
   updateAssistPanel();
 });
 
-pasteBox.addEventListener('paste', () => {
-  setTimeout(() => runParse(), 50);
+/* Global paste capture: with a grid active on the tracker tab, Ctrl+V anywhere
+   on the page (outside a form field) is treated as "results for the current
+   point" — no need to click into the box first. */
+document.addEventListener('paste', (e) => {
+  if (!document.getElementById('panel-tracker').classList.contains('active')) return;
+  if (!currentScan || currentIdx == null) return;
+  const t = e.target;
+  const isOtherField = t && ((t.tagName === 'INPUT') ||
+    (t.tagName === 'TEXTAREA' && t.id !== 'pasteBox') || t.isContentEditable);
+  if (isOtherField) return;
+  const text = (e.clipboardData || window.clipboardData).getData('text') || '';
+  if (!text.trim()) return;
+  e.preventDefault();
+  pasteBox.value = text;
+  runParse(true);
 });
-document.getElementById('parseBtn').addEventListener('click', runParse);
+document.getElementById('parseBtn').addEventListener('click', () => runParse(true));
 
-function runParse(){
+function runParse(fromGesture){
   if (!currentScan){ setParseStatus('Build a grid first.', 'err'); return; }
   if (currentIdx == null){ setParseStatus('All points are scanned — pick a dot on the map to re-scan it.', 'err'); return; }
   const text = pasteBox.value;
@@ -1432,8 +1480,15 @@ function runParse(){
   } else {
     msg += 'Business not found in these results — recorded as 21+.';
   }
-  if (currentIdx != null) msg += ' Next: point ' + (currentIdx + 1) + '.';
-  else msg += ' Grid complete ✓';
+  if (currentIdx != null){
+    msg += ' Next: point ' + (currentIdx + 1) + '.';
+    if (fromGesture && document.getElementById('autoOpen').checked){
+      window.open(currentScan.points[currentIdx].url, '_blank', 'noopener');
+      msg += ' Its search just opened — Ctrl+A · Ctrl+C there, then Ctrl+V back here.';
+    }
+  } else {
+    msg += ' Grid complete ✓';
+  }
   setParseStatus(msg, result.rank >= 1 ? 'ok' : '');
 }
 
