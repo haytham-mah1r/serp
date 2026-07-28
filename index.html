@@ -4,14 +4,14 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <meta name="referrer" content="no-referrer"/>
-<title>Meridian — Local Rank Console</title>
+<title>GBP Reporter — Local rank grids for Google Business Profiles</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <style>
 /* ============================================================
-   MERIDIAN — local rank console
+   GBP REPORTER — local rank console
    Design language: a field survey instrument.
    Graphite console rail (the instrument body) · paper workspace
    (the chart) · orange as the signal colour · mono type for every
@@ -105,23 +105,26 @@ body{
 }
 .rail-brand{padding:20px 20px 16px; display:flex; align-items:center; gap:11px; border-bottom:1px solid var(--console-line);}
 .rail-mark{
-  width:34px;height:34px;border-radius:10px;flex:none;
-  background:linear-gradient(140deg,var(--brand-hi),var(--brand-deep));
-  display:grid;place-items:center;box-shadow:0 6px 16px -6px rgba(232,119,34,.8);
+  height:36px;flex:none;background:#fff;border-radius:9px;padding:6px 9px;
+  display:grid;place-items:center;box-shadow:0 6px 16px -8px rgba(0,0,0,.6);
 }
-.rail-mark svg{width:19px;height:19px;}
+.rail-mark img{height:20px;width:auto;display:block;}
 .rail-brand h1{font-family:var(--display);font-size:15px;font-weight:600;margin:0;letter-spacing:-.01em;color:#fff;}
 .rail-brand p{margin:1px 0 0;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--console-ink-2);font-weight:600;}
 
-.rail-search{padding:14px 16px 10px;position:relative;}
-.rail-search input{
+.rail-search{padding:14px 16px 10px;}
+.rail-search-box{position:relative;display:flex;align-items:center;}
+/* id selector so the generic input styling further down cannot win and strip
+   the left padding that keeps the text clear of the magnifier */
+#clientSearch{
   width:100%;background:#11161b;border:1px solid var(--console-line);color:var(--console-ink);
-  border-radius:var(--r-md);padding:9px 12px 9px 32px;font-family:var(--ui);font-size:12.5px;
+  border-radius:var(--r-md);padding:9px 12px 9px 36px;font-family:var(--ui);font-size:12.5px;line-height:1.4;
   transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
 }
-.rail-search input::placeholder{color:#6d7b89;}
-.rail-search input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(232,119,34,.18);}
-.rail-search svg{position:absolute;left:27px;top:23px;width:14px;height:14px;stroke:#6d7b89;}
+#clientSearch::placeholder{color:#6d7b89;}
+#clientSearch:hover{border-color:#4a5663;}
+#clientSearch:focus{outline:none;border-color:var(--brand);background:#11161b;box-shadow:0 0 0 3px rgba(232,119,34,.18);}
+.rail-search-box svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:#6d7b89;pointer-events:none;}
 
 .rail-head{
   display:flex;align-items:center;justify-content:space-between;
@@ -646,20 +649,18 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
   <!-- ==================== CONSOLE RAIL ==================== -->
   <aside class="rail">
     <div class="rail-brand">
-      <div class="rail-mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="1.6" fill="#fff" stroke="none"/>
-        </svg>
-      </div>
+      <div class="rail-mark"><img id="brandLogo" alt="EDGE Marketing &amp; Design"/></div>
       <div>
-        <h1>Meridian</h1>
-        <p>Local rank console</p>
+        <h1>GBP Reporter</h1>
+        <p>by EDGE Marketing</p>
       </div>
     </div>
 
     <div class="rail-search">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input id="clientSearch" type="text" placeholder="Find a client or profile" autocomplete="off"/>
+      <div class="rail-search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="clientSearch" type="text" placeholder="Find a client or profile" autocomplete="off"/>
+      </div>
     </div>
 
     <div class="rail-head">
@@ -713,7 +714,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
               <section class="step open" data-step="1">
                 <div class="step-head">
                   <div class="step-n">1</div>
-                  <div class="step-title">Profile identity<small>How Meridian recognises this listing</small></div>
+                  <div class="step-title">Profile identity<small>How GBP Reporter recognises this listing</small></div>
                   <svg class="step-chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
                 </div>
                 <div class="step-body">
@@ -911,7 +912,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
                     </select>
                   </div>
                   <label class="sw" style="margin-bottom:6px"><input type="checkbox" id="deepVerify" checked/><i></i><span>Widen the search before calling a point absent</span></label>
-                  <div class="hint" style="margin-bottom:14px">When a point finds nothing, Meridian re-runs it at a wider map view and then on the other surface before it will report the profile as missing. Points that find the profile straight away cost one call as usual — only the empty ones cost extra.</div>
+                  <div class="hint" style="margin-bottom:14px">When a point finds nothing, GBP Reporter re-runs it at a wider map view and then on the other surface before it will report the profile as missing. Points that find the profile straight away cost one call as usual — only the empty ones cost extra.</div>
                   <div class="f">
                     <label for="proxyPrefix">CORS proxy prefix <span class="opt">only if requests are blocked</span></label>
                     <input id="proxyPrefix" type="text" placeholder="https://your-proxy.example.com/" autocomplete="off"/>
@@ -1266,6 +1267,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 
 <div class="toast-wrap" id="toasts"></div>
 
+<script>
+window.EDGE_LOGO = "data:image/png;base64,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";
+window.EDGE_LOGO_RATIO = 512/200;
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -1274,7 +1279,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <script>
 /* ==========================================================================
-   MERIDIAN — local rank console
+   GBP REPORTER — local rank console
    Data model:  client → gbps[] → keywords[] → scans[]
                 client → compareScans[]   (one keyword across every profile)
    Everything autosaves to localStorage immediately and mirrors to Firestore.
@@ -1309,6 +1314,7 @@ try{
 
 /* ---------- tiny helpers ---------- */
 const $ = id => document.getElementById(id);
+if (window.EDGE_LOGO){ const bl = document.getElementById('brandLogo'); if (bl) bl.src = window.EDGE_LOGO; }
 const uid = () => 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1869,7 +1875,7 @@ function renderMeter(){
     bars[i].className = i < n ? (hasCid ? 'lit top' : 'lit') : '';
   }
   let verdict, note;
-  if (!g || n === 0){ verdict = 'Add details'; note = 'Meridian needs at least the business name to recognise this listing in the results.'; }
+  if (!g || n === 0){ verdict = 'Add details'; note = 'GBP Reporter needs at least the business name to recognise this listing in the results.'; }
   else if (hasCid && n >= 3){ verdict = 'Certain'; note = 'A CID match is unmistakable. This profile will be identified even if a competitor shares its name.'; }
   else if (hasCid){ verdict = 'Certain'; note = 'The CID from the profile link identifies this listing exactly. Add the phone and website as backup for providers that don\'t return a CID.'; }
   else if (n >= 3){ verdict = 'Strong'; note = 'Phone and website matches are near-certain. Paste the full maps link to add a CID and make it exact.'; }
@@ -1888,7 +1894,7 @@ function renderGridInfo(){
   const mins = secs >= 90 ? (Math.round(secs / 6) / 10) + ' min' : secs + ' sec';
   $('gridInfo').innerHTML = '<strong>' + (n*n) + ' searches</strong> covering roughly ' + span + ' km × ' + span +
     ' km \u00b7 about <strong>' + mins + '</strong> at ' + lanes + ' point' + (lanes === 1 ? '' : 's') + ' at a time. ' +
-    'A point that finds the profile costs one call; a point that finds nothing costs up to five while Meridian widens the search to be sure.';
+    'A point that finds the profile costs one call; a point that finds nothing costs up to five while GBP Reporter widens the search to be sure.';
 }
 
 /* ---------- geocoding buttons ---------- */
@@ -2027,7 +2033,7 @@ $('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'meridian-data-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'gbp-reporter-data-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
   URL.revokeObjectURL(a.href);
   toast('Data exported', 'ok');
@@ -2040,7 +2046,7 @@ $('importFile').addEventListener('change', e => {
   reader.onload = () => {
     try{
       const data = JSON.parse(reader.result);
-      if (!data || !Array.isArray(data.clients)) throw new Error('that file isn\'t a Meridian export');
+      if (!data || !Array.isArray(data.clients)) throw new Error('that file isn\'t a GBP Reporter export');
       data.settings = Object.assign({}, DEFAULTS, data.settings || {});
       data.clients.forEach(migrateClient);
       state = data;
@@ -2636,7 +2642,7 @@ function buildTips(scan, g){
 
   if (s.fuzzy >= Math.max(2, s.read * 0.15)){
     t.push({p:'low', title:'Tighten how this profile is identified',
-      body:s.fuzzy + ' points were matched on the business name alone, which is the one thing that can put a competitor\u2019s number in your client\u2019s report. Paste the full maps link on step one so Meridian has the CID, and fill in the phone and website. It changes nothing about the rankings — it makes the report unarguable.',
+      body:s.fuzzy + ' points were matched on the business name alone, which is the one thing that can put a competitor\u2019s number in your client\u2019s report. Paste the full maps link on step one so GBP Reporter has the CID, and fill in the phone and website. It changes nothing about the rankings — it makes the report unarguable.',
       ev:s.fuzzy + ' name-only matches'});
   }
 
@@ -3978,29 +3984,48 @@ async function captureMap(el){
     return canvas.toDataURL('image/png');
   }catch(e){ return null; }
 }
+function pdfLogo(doc, x, y, h){
+  // The mark is charcoal and orange, so it sits on its own white chip wherever
+  // the background behind it is dark.
+  if (!window.EDGE_LOGO) return 0;
+  const w = h * (window.EDGE_LOGO_RATIO || 2.56);
+  doc.setFillColor(255,255,255);
+  doc.roundedRect(x - 9, y - 7, w + 18, h + 14, 5, 5, 'F');
+  doc.addImage(window.EDGE_LOGO, 'PNG', x, y, w, h, undefined, 'FAST');
+  return w + 18;
+}
 function pdfHeader(doc, W, title, sub){
-  doc.setFillColor(...PDF_INK); doc.rect(0, 0, W, 78, 'F');
-  doc.setFillColor(...PDF_BRAND); doc.rect(0, 74, W, 4, 'F');
+  doc.setFillColor(...PDF_INK); doc.rect(0, 0, W, 88, 'F');
+  doc.setFillColor(...PDF_BRAND); doc.rect(0, 84, W, 4, 'F');
+
+  const logoH = 20;
+  const logoW = logoH * (window.EDGE_LOGO_RATIO || 2.56) + 18;
+  pdfLogo(doc, W - 40 - logoW + 9, 22, logoH);
+
   doc.setTextColor(255,255,255);
   doc.setFont('helvetica','bold'); doc.setFontSize(17);
-  doc.text(title, 40, 36);
+  doc.text(doc.splitTextToSize(title, W - 100 - logoW)[0], 40, 38);
   doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
   doc.setTextColor(190,200,210);
-  doc.text(sub, 40, 54);
-  doc.setTextColor(...PDF_BRAND); doc.setFont('helvetica','bold'); doc.setFontSize(9);
-  doc.text('MERIDIAN', W - 40, 36, {align:'right'});
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(150,162,172);
-  doc.text(new Date().toLocaleString(), W - 40, 50, {align:'right'});
+  doc.text(doc.splitTextToSize(sub, W - 90 - logoW)[0], 40, 56);
+  doc.setFontSize(7.5); doc.setTextColor(150,162,172);
+  doc.text('GBP REPORTER  ·  ' + new Date().toLocaleString(), 40, 72);
 }
 function pdfFooter(doc, W, H){
   const pages = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pages; i++){
     doc.setPage(i);
     doc.setDrawColor(228,233,237); doc.setLineWidth(.6);
-    doc.line(40, H - 38, W - 40, H - 38);
+    doc.line(40, H - 42, W - 40, H - 42);
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(...PDF_SOFT);
-    doc.text('Meridian local rank report · EDGE Marketing & Design Inc.', 40, H - 24);
-    doc.text(i + ' / ' + pages, W - 40, H - 24, {align:'right'});
+    if (window.EDGE_LOGO){
+      const lh = 11, lw = lh * (window.EDGE_LOGO_RATIO || 2.56);
+      doc.addImage(window.EDGE_LOGO, 'PNG', 40, H - 36, lw, lh, undefined, 'FAST');
+      doc.text('GBP Reporter  ·  edgemarketing.ca', 40 + lw + 10, H - 27);
+    } else {
+      doc.text('GBP Reporter · EDGE Marketing & Design Inc.', 40, H - 27);
+    }
+    doc.text(i + ' / ' + pages, W - 40, H - 27, {align:'right'});
   }
 }
 function pdfStatRow(doc, x, y, W, stats){
@@ -4085,7 +4110,7 @@ $('pdfBtn').addEventListener('click', async () => {
     const avg = found.length ? (found.reduce((s,p) => s + p.rank, 0) / found.length).toFixed(1) : '—';
     const share = read.length ? Math.round(top3 / read.length * 100) : 0;
 
-    let y = 104;
+    let y = 114;
     y = pdfStatRow(doc, 40, y, W, [
       {value: top3 + ' pts', label: 'Top three · ' + share + '%', color:[15,122,88]},
       {value: avg, label: 'Average position', color: PDF_BRAND},
@@ -4201,7 +4226,7 @@ $('cmpPdfBtn').addEventListener('click', async () => {
 
     const read = scan.points.filter(p => p.results);
     const gbps = c ? c.gbps : [];
-    let y = 104;
+    let y = 114;
     const winners = read.map(p => bestAt(p, gbps)).filter(Boolean);
     y = pdfStatRow(doc, 40, y, W, [
       {value: read.length + '/' + scan.points.length, label:'Points read', color:[110,124,136]},
