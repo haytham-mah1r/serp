@@ -4886,12 +4886,24 @@ async function bootEmbedView(shareId){
       showEmbedMessage('This report link is no longer available.');
       return;
     }
+    map.setMinZoom(11); // never zoom out past "neighbourhood" scale, whatever the widget's shape
     setAppVisible(true);
     if ($('mapCard')) $('mapCard').classList.add('fullscreen');
     document.body.classList.add('map-locked');
     map.invalidateSize();
     renderEmbedSnapshot(snap.data());
-    setTimeout(() => { map.invalidateSize(); recenterMap(); }, 260);
+    const refit = () => { map.invalidateSize(); recenterMap(); };
+    setTimeout(refit, 260);
+    // Embed widgets often resize asynchronously (after their own layout
+    // settles) — keep re-fitting whenever the container's real size changes,
+    // instead of guessing a single delay.
+    if (window.ResizeObserver && $('mapCard')){
+      let roTimer = null;
+      new ResizeObserver(() => {
+        clearTimeout(roTimer);
+        roTimer = setTimeout(refit, 150);
+      }).observe($('mapCard'));
+    }
   }catch(err){
     if ($('loadingScreen')) $('loadingScreen').classList.remove('on');
     showEmbedMessage('Couldn\u2019t load this report right now.');
