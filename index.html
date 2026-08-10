@@ -696,6 +696,21 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 .map-card.fullscreen #map,.map-card.fullscreen #cmpMap{flex:1;height:auto !important;width:100%;}
 .map-card.fullscreen .map-head,.map-card.fullscreen .legend{flex:none;}
 body.map-locked{overflow:hidden;}
+
+/* ---- public embed view: one GBP's expanded map, no login, no app chrome ---- */
+body.embed-mode .rail,
+body.embed-mode .topbar,
+body.embed-mode .gbp-tabs,
+body.embed-mode .toast-wrap,
+body.embed-mode .map-head .tools,
+body.embed-mode #telemetry,
+body.embed-mode #assistPanel{display:none !important;}
+body.embed-mode #mapCard{box-shadow:none;}
+.embed-message{
+  position:fixed;inset:0;z-index:9500;display:grid;place-items:center;text-align:center;padding:24px;
+  background:linear-gradient(160deg,#1c232b 0%,#10141a 100%);color:var(--console-ink);
+  font-family:var(--ui);font-size:14px;line-height:1.6;
+}
 </style>
 </head>
 <body>
@@ -1386,8 +1401,20 @@ window.EDGE_LOGO_RATIO = 512/200;
        match /users/{userId}/{document=**} {
          allow read, write: if request.auth != null && request.auth.uid == userId;
        }
+
+       // Public, read-only "expand map" embed links (see publishGbpView() /
+       // bootEmbedView() below). Anyone with the link can read one GBP's
+       // published snapshot — no login. Only a signed-in team member can
+       // publish or overwrite one, and only your app writes here.
+       match /publicViews/{gbpId} {
+         allow read: if true;
+         allow write: if request.auth != null;
+       }
      }
    }
+   ⚠ This second rule block must be added in the Firebase console before
+   embed links will work — without it, publishing fails and embed URLs
+   show "This report link is no longer available."
 --------------------------------------------------------------------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyA94BzMWcwqlK9Bpmclw6l0hSDiyPhQ_AA",
@@ -4755,25 +4782,139 @@ function toggleMapFullscreen(cardId, mapObj, btnId){
   if (btn) btn.textContent = on ? 'Close' : 'Expand map';
   setTimeout(() => { if (mapObj) mapObj.invalidateSize(); }, 260);
 }
+
+/* ---------------------------------------------------------------------------
+   Public embed links. Every GBP gets a stable share URL (built from its own
+   id), so it never changes once it's been shared. Expanding that GBP's map
+   re-publishes a read-only snapshot of whatever scan is currently on screen
+   to Firestore, so the embedded link always shows the latest expanded view.
+--------------------------------------------------------------------------- */
+function embedUrlFor(shareId){
+  return location.origin + location.pathname + '#/embed/' + encodeURIComponent(shareId);
+}
+async function publishGbpView(g, kw, scan){
+  if (!fbDb || !fbUid || !g || !scan) return null;
+  const shareId = g.id;
+  try{
+    await fbDb.collection('publicViews').doc(shareId).set({
+      gbpId: g.id,
+      gbpName: g.name || g.bizName || 'Location',
+      keyword: (kw && kw.text) || scan.keyword || '',
+      scan: JSON.parse(JSON.stringify(scan)),
+      updatedAt: Date.now(),
+      updatedBy: fbUid
+    });
+    return shareId;
+  }catch(err){
+    return null;
+  }
+}
+async function publishAndShare(){
+  const g = activeGbp(), kw = activeKeyword();
+  if (!g || !currentScan){
+    toast('Run or open a scan first — the embed link needs a scan to show.', 'err');
+    return;
+  }
+  const id = await publishGbpView(g, kw, currentScan);
+  if (!id){
+    toast('Couldn\u2019t publish. Check the publicViews Firestore rule near the top of the file.', 'err');
+    return;
+  }
+  const url = embedUrlFor(id);
+  try{ await navigator.clipboard.writeText(url); }catch(e){ /* clipboard not available — link is still shown below */ }
+  ask('Public embed link (copied)', 'This link updates automatically the next time you expand this profile\u2019s map. Paste it into AgencyAnalytics\u2019 Embed widget, in the URL or iFrame field.', '', url);
+}
+
 const expandMapBtnEl = $('expandMapBtn');
-if (expandMapBtnEl) expandMapBtnEl.addEventListener('click', () => toggleMapFullscreen('mapCard', map, 'expandMapBtn'));
+if (expandMapBtnEl) expandMapBtnEl.addEventListener('click', () => {
+  const card = $('mapCard');
+  const wasExpanded = !!(card && card.classList.contains('fullscreen'));
+  toggleMapFullscreen('mapCard', map, 'expandMapBtn');
+  if (!wasExpanded) publishAndShare();
+});
 const cmpExpandMapBtnEl = $('cmpExpandMapBtn');
 if (cmpExpandMapBtnEl) cmpExpandMapBtnEl.addEventListener('click', () => toggleMapFullscreen('cmpMapCard', cmpMap, 'cmpExpandMapBtn'));
+
+/* ---------------------------------------------------------------------------
+   Public embed view. Reached at <this file>#/embed/<gbpId> — no login, no
+   sidebar, just that GBP's published map, permanently expanded. Meant to be
+   opened directly, e.g. inside an AgencyAnalytics embed widget.
+--------------------------------------------------------------------------- */
+function showEmbedMessage(msg){
+  const el = document.createElement('div');
+  el.className = 'embed-message';
+  el.textContent = msg;
+  document.body.appendChild(el);
+}
+function renderEmbedSnapshot(data){
+  const scan = (data && data.scan) || null;
+  const kw = { id:'embed-kw', text:(data && data.keyword) || (scan && scan.keyword) || '', scans: scan ? [scan] : [] };
+  const g = Object.assign(blankGbp((data && data.gbpName) || 'Location'), {
+    id: (data && data.gbpId) || 'embed-gbp',
+    name: (data && data.gbpName) || 'Location',
+    bizName: (scan && scan.business && scan.business.name) || (data && data.gbpName) || '',
+    phone: (scan && scan.business && scan.business.phone) || '',
+    website: (scan && scan.business && scan.business.website) || '',
+    cid: (scan && scan.business && scan.business.cid) || null,
+    center: (scan && scan.center) || {lat:null,lng:null,label:''},
+    gridSize: (scan && scan.grid && scan.grid.rows) || 7,
+    spacingKm: (scan && scan.grid && scan.grid.spacingKm) || 1.5,
+    surface: (scan && scan.surface) || 'local',
+    zoom: (scan && scan.zoom) || 14,
+    keywords: [kw], activeKeywordId: kw.id
+  });
+  state.clients = [{ id:'embed-client', name:g.name, gbps:[g], compareScans:[] }];
+  state.activeClientId = 'embed-client';
+  state.activeGbpId = g.id;
+  drawScan(scan);
+}
+async function bootEmbedView(shareId){
+  document.body.classList.add('embed-mode');
+  if ($('loginScreen')) $('loginScreen').classList.remove('on');
+  if ($('loadingScreen')) $('loadingScreen').classList.add('on');
+  setAppVisible(false);
+  if (!fbDb){
+    if ($('loadingScreen')) $('loadingScreen').classList.remove('on');
+    showEmbedMessage('This report needs an internet connection to load.');
+    return;
+  }
+  try{
+    const snap = await fbDb.collection('publicViews').doc(shareId).get();
+    if ($('loadingScreen')) $('loadingScreen').classList.remove('on');
+    if (!snap.exists){
+      showEmbedMessage('This report link is no longer available.');
+      return;
+    }
+    renderEmbedSnapshot(snap.data());
+    setAppVisible(true);
+    if ($('mapCard')) $('mapCard').classList.add('fullscreen');
+    document.body.classList.add('map-locked');
+    setTimeout(() => map.invalidateSize(), 120);
+  }catch(err){
+    if ($('loadingScreen')) $('loadingScreen').classList.remove('on');
+    showEmbedMessage('Couldn\u2019t load this report right now.');
+  }
+}
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   if ($('mapCard') && $('mapCard').classList.contains('fullscreen')) toggleMapFullscreen('mapCard', map, 'expandMapBtn');
   if ($('cmpMapCard') && $('cmpMapCard').classList.contains('fullscreen')) toggleMapFullscreen('cmpMapCard', cmpMap, 'cmpExpandMapBtn');
 });
 
-fillRegions($('region'));
-fillRegions($('tRegion'));
-fillRegions($('cmpRegion'));
-fillRegions($('kwRegion'));
-hydrateSettings();
-if (state.clients.length && !activeClient()) state.activeClientId = state.clients[0].id;
-renderAll();
-pill('');
-initCloud();
+const EMBED_ROUTE = location.hash.match(/^#\/embed\/([^/?#]+)$/);
+if (EMBED_ROUTE){
+  bootEmbedView(decodeURIComponent(EMBED_ROUTE[1]));
+} else {
+  fillRegions($('region'));
+  fillRegions($('tRegion'));
+  fillRegions($('cmpRegion'));
+  fillRegions($('kwRegion'));
+  hydrateSettings();
+  if (state.clients.length && !activeClient()) state.activeClientId = state.clients[0].id;
+  renderAll();
+  pill('');
+  initCloud();
+}
 
 </script>
 </body>
