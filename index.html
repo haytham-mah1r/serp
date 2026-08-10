@@ -4790,7 +4790,7 @@ function toggleMapFullscreen(cardId, mapObj, btnId){
    to Firestore, so the embedded link always shows the latest expanded view.
 --------------------------------------------------------------------------- */
 function embedUrlFor(shareId){
-  return location.origin + location.pathname + '#/embed/' + encodeURIComponent(shareId);
+  return location.origin + location.pathname + '?embed=' + encodeURIComponent(shareId);
 }
 async function publishGbpView(g, kw, scan){
   if (!fbDb || !fbUid || !g || !scan) return null;
@@ -4901,9 +4901,11 @@ document.addEventListener('keydown', e => {
   if ($('cmpMapCard') && $('cmpMapCard').classList.contains('fullscreen')) toggleMapFullscreen('cmpMapCard', cmpMap, 'cmpExpandMapBtn');
 });
 
-const EMBED_ROUTE = location.hash.match(/^#\/embed\/([^/?#]+)$/);
-if (EMBED_ROUTE){
-  bootEmbedView(decodeURIComponent(EMBED_ROUTE[1]));
+const EMBED_QUERY_ID = new URLSearchParams(location.search).get('embed');
+const EMBED_HASH_ROUTE = location.hash.match(/^#\/embed\/([^/?#]+)$/);
+const EMBED_ID = EMBED_QUERY_ID || (EMBED_HASH_ROUTE ? decodeURIComponent(EMBED_HASH_ROUTE[1]) : null);
+if (EMBED_ID){
+  bootEmbedView(EMBED_ID);
 } else {
   fillRegions($('region'));
   fillRegions($('tRegion'));
