@@ -707,7 +707,7 @@ body.embed-mode #telemetry,
 body.embed-mode #assistPanel{display:none !important;}
 body.embed-mode #mapCard{box-shadow:none;}
 .embed-kw-switch{display:none;}
-body.embed-mode .embed-kw-switch{display:flex;flex-basis:100%;gap:7px;flex-wrap:wrap;margin-top:2px;}
+.map-card.fullscreen .embed-kw-switch{display:flex;flex-basis:100%;gap:7px;flex-wrap:wrap;margin-top:2px;}
 .embed-kw-switch .chip{padding:6px 12px;}
 .embed-message{
   position:fixed;inset:0;z-index:9500;display:grid;place-items:center;text-align:center;padding:24px;
@@ -2151,6 +2151,7 @@ function renderKeywords(){
     d.className = 'chips-empty';
     d.textContent = 'No keywords yet — add the phrases customers actually type.';
     wrap.appendChild(d);
+    renderEmbedKeywordSwitch();
     return;
   }
   g.keywords.forEach(k => {
@@ -2179,6 +2180,7 @@ function renderKeywords(){
     });
     wrap.appendChild(chip);
   });
+  renderEmbedKeywordSwitch();
 }
 
 /* ---------- settings ---------- */
@@ -4885,7 +4887,6 @@ function renderEmbedSnapshot(data){
   state.activeGbpId = g.id;
   state.view = 'focus';
   renderAll();
-  renderEmbedKeywordSwitch();
 }
 function renderEmbedKeywordSwitch(){
   const wrap = $('embedKwSwitch');
@@ -4900,9 +4901,9 @@ function renderEmbedKeywordSwitch(){
     chip.addEventListener('click', () => {
       if (g.activeKeywordId === k.id) return;
       g.activeKeywordId = k.id;
+      save(); renderKeywords(); renderHistory();
       drawScan(k.scans.length ? k.scans[k.scans.length - 1] : null);
       recenterMap();
-      renderEmbedKeywordSwitch();
     });
     wrap.appendChild(chip);
   });
