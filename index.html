@@ -4866,7 +4866,8 @@ function renderEmbedSnapshot(data){
   state.clients = [{ id:'embed-client', name:g.name, gbps:[g], compareScans:[] }];
   state.activeClientId = 'embed-client';
   state.activeGbpId = g.id;
-  drawScan(scan);
+  state.view = 'focus';
+  renderAll();
 }
 async function bootEmbedView(shareId){
   document.body.classList.add('embed-mode');
