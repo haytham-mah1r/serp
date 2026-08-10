@@ -4886,11 +4886,12 @@ async function bootEmbedView(shareId){
       showEmbedMessage('This report link is no longer available.');
       return;
     }
-    renderEmbedSnapshot(snap.data());
     setAppVisible(true);
     if ($('mapCard')) $('mapCard').classList.add('fullscreen');
     document.body.classList.add('map-locked');
-    setTimeout(() => map.invalidateSize(), 120);
+    map.invalidateSize();
+    renderEmbedSnapshot(snap.data());
+    setTimeout(() => { map.invalidateSize(); recenterMap(); }, 260);
   }catch(err){
     if ($('loadingScreen')) $('loadingScreen').classList.remove('on');
     showEmbedMessage('Couldn\u2019t load this report right now.');
