@@ -706,6 +706,9 @@ body.embed-mode .map-head .tools,
 body.embed-mode #telemetry,
 body.embed-mode #assistPanel{display:none !important;}
 body.embed-mode #mapCard{box-shadow:none;}
+.embed-kw-switch{display:none;}
+body.embed-mode .embed-kw-switch{display:flex;flex-basis:100%;gap:7px;flex-wrap:wrap;margin-top:2px;}
+.embed-kw-switch .chip{padding:6px 12px;}
 .embed-message{
   position:fixed;inset:0;z-index:9500;display:grid;place-items:center;text-align:center;padding:24px;
   background:linear-gradient(160deg,#1c232b 0%,#10141a 100%);color:var(--console-ink);
@@ -1050,6 +1053,7 @@ body.embed-mode #mapCard{box-shadow:none;}
                 <div class="map-head">
                   <h3 id="mapTitle">Coverage map</h3>
                   <div class="map-sub" id="mapSub"></div>
+                  <div class="embed-kw-switch" id="embedKwSwitch"></div>
                   <div class="tools">
                     <select id="historySelect" style="width:auto;min-width:190px;font-size:12px;padding:7px 30px 7px 11px"></select>
                     <button class="btn btn-sm" id="expandMapBtn">Expand map</button>
@@ -4786,21 +4790,25 @@ function toggleMapFullscreen(cardId, mapObj, btnId){
 /* ---------------------------------------------------------------------------
    Public embed links. Every GBP gets a stable share URL (built from its own
    id), so it never changes once it's been shared. Expanding that GBP's map
-   re-publishes a read-only snapshot of whatever scan is currently on screen
-   to Firestore, so the embedded link always shows the latest expanded view.
+   re-publishes a read-only snapshot of every keyword's latest scan for that
+   GBP to Firestore, so the embedded link can be navigated by keyword too.
 --------------------------------------------------------------------------- */
 function embedUrlFor(shareId){
   return location.origin + location.pathname + '?embed=' + encodeURIComponent(shareId);
 }
-async function publishGbpView(g, kw, scan){
-  if (!fbDb || !fbUid || !g || !scan) return null;
+async function publishGbpView(g){
+  if (!fbDb || !fbUid || !g) return null;
+  const keywordsData = g.keywords
+    .filter(k => k.scans.length)
+    .map(k => ({ id:k.id, text:k.text, scan: JSON.parse(JSON.stringify(k.scans[k.scans.length - 1])) }));
+  if (!keywordsData.length) return null;
   const shareId = g.id;
   try{
     await fbDb.collection('publicViews').doc(shareId).set({
       gbpId: g.id,
       gbpName: g.name || g.bizName || 'Location',
-      keyword: (kw && kw.text) || scan.keyword || '',
-      scan: JSON.parse(JSON.stringify(scan)),
+      activeKeywordId: g.activeKeywordId || keywordsData[0].id,
+      keywords: keywordsData,
       updatedAt: Date.now(),
       updatedBy: fbUid
     });
@@ -4810,19 +4818,19 @@ async function publishGbpView(g, kw, scan){
   }
 }
 async function publishAndShare(){
-  const g = activeGbp(), kw = activeKeyword();
-  if (!g || !currentScan){
-    toast('Run or open a scan first — the embed link needs a scan to show.', 'err');
+  const g = activeGbp();
+  if (!g || !g.keywords.some(k => k.scans.length)){
+    toast('Run or open a scan first — the embed link needs at least one scan to show.', 'err');
     return;
   }
-  const id = await publishGbpView(g, kw, currentScan);
+  const id = await publishGbpView(g);
   if (!id){
     toast('Couldn\u2019t publish. Check the publicViews Firestore rule near the top of the file.', 'err');
     return;
   }
   const url = embedUrlFor(id);
   try{ await navigator.clipboard.writeText(url); }catch(e){ /* clipboard not available — link is still shown below */ }
-  ask('Public embed link (copied)', 'This link updates automatically the next time you expand this profile\u2019s map. Paste it into AgencyAnalytics\u2019 Embed widget, in the URL or iFrame field.', '', url);
+  ask('Public embed link (copied)', 'This link updates automatically the next time you expand this profile\u2019s map. Every keyword with a scan is included, so the client can switch between them. Paste it into AgencyAnalytics\u2019 Embed widget, in the URL or iFrame field.', '', url);
 }
 
 const expandMapBtnEl = $('expandMapBtn');
@@ -4847,8 +4855,17 @@ function showEmbedMessage(msg){
   document.body.appendChild(el);
 }
 function renderEmbedSnapshot(data){
-  const scan = (data && data.scan) || null;
-  const kw = { id:'embed-kw', text:(data && data.keyword) || (scan && scan.keyword) || '', scans: scan ? [scan] : [] };
+  const rawKeywords = (data && Array.isArray(data.keywords) && data.keywords.length)
+    ? data.keywords
+    : (data && data.scan ? [{ id:'embed-kw', text:data.keyword || data.scan.keyword || '', scan:data.scan }] : []);
+  const keywords = rawKeywords.map(k => ({
+    id: k.id || uid(), text: k.text || '', scans: k.scan ? [k.scan] : []
+  }));
+  const activeId = (data && data.activeKeywordId && keywords.some(k => k.id === data.activeKeywordId))
+    ? data.activeKeywordId
+    : (keywords[0] ? keywords[0].id : null);
+  const activeKw = keywords.find(k => k.id === activeId) || keywords[0] || null;
+  const scan = activeKw && activeKw.scans.length ? activeKw.scans[0] : null;
   const g = Object.assign(blankGbp((data && data.gbpName) || 'Location'), {
     id: (data && data.gbpId) || 'embed-gbp',
     name: (data && data.gbpName) || 'Location',
@@ -4861,13 +4878,34 @@ function renderEmbedSnapshot(data){
     spacingKm: (scan && scan.grid && scan.grid.spacingKm) || 1.5,
     surface: (scan && scan.surface) || 'local',
     zoom: (scan && scan.zoom) || 14,
-    keywords: [kw], activeKeywordId: kw.id
+    keywords: keywords, activeKeywordId: activeId
   });
   state.clients = [{ id:'embed-client', name:g.name, gbps:[g], compareScans:[] }];
   state.activeClientId = 'embed-client';
   state.activeGbpId = g.id;
   state.view = 'focus';
   renderAll();
+  renderEmbedKeywordSwitch();
+}
+function renderEmbedKeywordSwitch(){
+  const wrap = $('embedKwSwitch');
+  if (!wrap) return;
+  const g = activeGbp();
+  wrap.innerHTML = '';
+  if (!g || g.keywords.length < 2) return;
+  g.keywords.forEach(k => {
+    const chip = document.createElement('span');
+    chip.className = 'chip' + (k.id === g.activeKeywordId ? ' on' : '');
+    chip.textContent = k.text || 'Untitled keyword';
+    chip.addEventListener('click', () => {
+      if (g.activeKeywordId === k.id) return;
+      g.activeKeywordId = k.id;
+      drawScan(k.scans.length ? k.scans[k.scans.length - 1] : null);
+      recenterMap();
+      renderEmbedKeywordSwitch();
+    });
+    wrap.appendChild(chip);
+  });
 }
 async function bootEmbedView(shareId){
   document.body.classList.add('embed-mode');
