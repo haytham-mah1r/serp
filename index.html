@@ -666,6 +666,36 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
   border-radius:50%; margin:4px auto 18px; animation:spin .8s linear infinite;
 }
 .auth-status{min-height:15px;}
+/* ---- GBP profile tabs ---- */
+.gbp-tabs{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:16px;
+  padding:5px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-1);
+}
+.gbp-tab{
+  display:flex;align-items:center;gap:7px;padding:8px 14px;border-radius:10px;border:none;background:none;
+  cursor:pointer;font-family:var(--ui);font-size:12.5px;font-weight:600;color:var(--ink-2);white-space:nowrap;
+  transition:all .16s var(--ease);max-width:220px;
+}
+.gbp-tab span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gbp-tab:hover{background:var(--card-2);color:var(--ink);}
+.gbp-tab.on{background:linear-gradient(135deg,var(--brand-hi),var(--brand-deep));color:#fff;box-shadow:0 6px 14px -6px rgba(184,87,15,.55);}
+.gbp-tab .tab-dot{width:6px;height:6px;border-radius:50%;background:var(--none);flex:none;}
+.gbp-tab.on .tab-dot{background:#fff;}
+.gbp-tab-add{
+  display:flex;align-items:center;gap:6px;padding:8px 13px;border-radius:10px;border:1px dashed var(--line);background:none;
+  cursor:pointer;font-family:var(--ui);font-size:12.5px;font-weight:600;color:var(--ink-3);transition:all .16s var(--ease);
+}
+.gbp-tab-add:hover{border-color:var(--brand);color:var(--brand-deep);background:var(--brand-wash);}
+
+/* ---- expandable full map ---- */
+.map-sub{flex-basis:100%;font-size:11.5px;color:var(--ink-2);margin-top:2px;font-family:var(--mono);}
+.map-card.fullscreen{
+  position:fixed;inset:0;z-index:3800;border-radius:0;display:flex;flex-direction:column;
+  box-shadow:none;border:none;
+}
+.map-card.fullscreen #map,.map-card.fullscreen #cmpMap{flex:1;height:auto !important;width:100%;}
+.map-card.fullscreen .map-head,.map-card.fullscreen .legend{flex:none;}
+body.map-locked{overflow:hidden;}
 </style>
 </head>
 <body>
@@ -762,6 +792,7 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 
         <!-- ---- FOCUS: one GBP ---- -->
         <div id="focusView" style="display:none">
+          <div class="gbp-tabs" id="gbpTabs"></div>
           <div class="setup">
             <div class="steps" id="steps">
 
@@ -1003,8 +1034,10 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
               <div class="map-card" id="mapCard">
                 <div class="map-head">
                   <h3 id="mapTitle">Coverage map</h3>
+                  <div class="map-sub" id="mapSub"></div>
                   <div class="tools">
                     <select id="historySelect" style="width:auto;min-width:190px;font-size:12px;padding:7px 30px 7px 11px"></select>
+                    <button class="btn btn-sm" id="expandMapBtn">Expand map</button>
                     <button class="btn btn-sm" id="pdfBtn">Download PDF</button>
                   </div>
                 </div>
@@ -1137,7 +1170,11 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
               <div class="map-card" id="cmpMapCard">
                 <div class="map-head">
                   <h3>Best-placed profile at each point</h3>
-                  <div class="tools"><button class="btn btn-sm" id="cmpPdfBtn">Download PDF</button></div>
+                  <div class="map-sub" id="cmpMapSub"></div>
+                  <div class="tools">
+                    <button class="btn btn-sm" id="cmpExpandMapBtn">Expand map</button>
+                    <button class="btn btn-sm" id="cmpPdfBtn">Download PDF</button>
+                  </div>
                 </div>
                 <div class="telemetry" id="cmpTelemetry">
                   <span class="t-live"><i></i>Reading</span>
@@ -2584,6 +2621,12 @@ function updateSummary(scan){
 
   const title = $('mapTitle');
   if (title) title.textContent = scan ? ('Coverage for “' + (scan.keyword || '') + '”') : 'Coverage map';
+  const sub = $('mapSub');
+  if (sub){
+    sub.textContent = scan
+      ? ('Keyword: “' + scan.keyword + '”  ·  Top 3: ' + (read.length ? top3 : '—') + '  ·  Avg: ' + avg + '  ·  Visible: ' + (read.length ? Math.round(found.length/read.length*100) + '%' : '—'))
+      : '';
+  }
   const st = $('mapStatus');
   const fuzzy = read.filter(p => p.matchConfidence === 'fuzzy').length;
   const failed = pts.filter(p => p.rank == null && p.error).length;
@@ -3734,9 +3777,15 @@ function comparePopup(p, idx, scan, gbps){
 }
 function updateCompareStatus(scan){
   const el = $('cmpMapStatus');
-  if (!scan){ setStatus(el, ''); return; }
+  const sub = $('cmpMapSub');
+  if (!scan){ setStatus(el, ''); if (sub) sub.textContent = ''; return; }
   const total = scan.points.length;
   const done = scan.points.filter(p => p.results || p.error).length;
+  if (sub){
+    const c = activeClient();
+    const n = c ? c.gbps.length : 0;
+    sub.textContent = 'Keyword: “' + scan.keyword + '”  ·  ' + n + ' profile' + (n === 1 ? '' : 's') + ' compared  ·  ' + done + '/' + total + ' points read';
+  }
   if (!done) setStatus(el, 'Nothing read yet for this comparison.', 'err');
   else if (done < total) setStatus(el, done + ' of ' + total + ' points read.', '');
   else setStatus(el, 'Every point read.', 'ok');
@@ -4649,6 +4698,7 @@ function renderAll(){
   $('emptyState').style.display = hasClient ? 'none' : 'block';
   $('focusView').style.display = hasClient && state.view === 'focus' ? 'block' : 'none';
   $('overviewView').style.display = hasClient && state.view === 'overview' ? 'block' : 'none';
+  renderGbpTabs();
 
   if (!hasClient) return;
   if (state.view === 'focus'){
@@ -4673,6 +4723,47 @@ function renderAll(){
     setTimeout(() => cmpMap.invalidateSize(), 60);
   }
 }
+
+function renderGbpTabs(){
+  const wrap = $('gbpTabs');
+  if (!wrap) return;
+  const c = activeClient();
+  wrap.innerHTML = '';
+  if (!c || state.view !== 'focus'){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'flex';
+  c.gbps.forEach(g => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'gbp-tab' + (g.id === state.activeGbpId ? ' on' : '');
+    btn.innerHTML = '<span class="tab-dot"></span><span>' + esc(g.name || g.bizName || 'Untitled profile') + '</span>';
+    btn.addEventListener('click', () => selectGbp(c.id, g.id));
+    wrap.appendChild(btn);
+  });
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.className = 'gbp-tab-add';
+  add.textContent = '+ Add location';
+  add.addEventListener('click', () => addGbp(c.id));
+  wrap.appendChild(add);
+}
+
+function toggleMapFullscreen(cardId, mapObj, btnId){
+  const card = $(cardId), btn = $(btnId);
+  if (!card) return;
+  const on = card.classList.toggle('fullscreen');
+  document.body.classList.toggle('map-locked', on);
+  if (btn) btn.textContent = on ? 'Close' : 'Expand map';
+  setTimeout(() => { if (mapObj) mapObj.invalidateSize(); }, 260);
+}
+const expandMapBtnEl = $('expandMapBtn');
+if (expandMapBtnEl) expandMapBtnEl.addEventListener('click', () => toggleMapFullscreen('mapCard', map, 'expandMapBtn'));
+const cmpExpandMapBtnEl = $('cmpExpandMapBtn');
+if (cmpExpandMapBtnEl) cmpExpandMapBtnEl.addEventListener('click', () => toggleMapFullscreen('cmpMapCard', cmpMap, 'cmpExpandMapBtn'));
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('mapCard') && $('mapCard').classList.contains('fullscreen')) toggleMapFullscreen('mapCard', map, 'expandMapBtn');
+  if ($('cmpMapCard') && $('cmpMapCard').classList.contains('fullscreen')) toggleMapFullscreen('cmpMapCard', cmpMap, 'cmpExpandMapBtn');
+});
 
 fillRegions($('region'));
 fillRegions($('tRegion'));
