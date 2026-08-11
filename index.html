@@ -124,6 +124,14 @@ body{
 #clientSearch::placeholder{color:#6d7b89;}
 #clientSearch:hover{border-color:#4a5663;}
 #clientSearch:focus{outline:none;border-color:var(--brand);background:#11161b;box-shadow:0 0 0 3px rgba(232,119,34,.18);}
+#seoClientSearch{
+  width:100%;background:#11161b;border:1px solid var(--console-line);color:var(--console-ink);
+  border-radius:var(--r-md);padding:9px 12px 9px 36px;font-family:var(--ui);font-size:12.5px;line-height:1.4;
+  transition:border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+#seoClientSearch::placeholder{color:#6d7b89;}
+#seoClientSearch:hover{border-color:#4a5663;}
+#seoClientSearch:focus{outline:none;border-color:var(--brand);background:#11161b;box-shadow:0 0 0 3px rgba(232,119,34,.18);}
 .rail-search-box svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:#6d7b89;pointer-events:none;}
 
 .rail-head{
@@ -5378,6 +5386,7 @@ async function seoScanAndRender(c, pairs){
 
 /* ---------- rail ---------- */
 function renderSeoTree(){
+  ensureSeoState();
   const tree = $('seoClientTree');
   const filter = ($('seoClientSearch').value || '').toLowerCase().trim();
   tree.innerHTML = '';
@@ -5415,6 +5424,7 @@ function renderSeoTree(){
 async function seoAddClient(){
   const name = await ask('Add an SEO client', 'What should we call them?', 'Client name');
   if (!name) return;
+  ensureSeoState(); // state can be swapped wholesale (cloud sync / import) while the modal was open
   const c = blankSeoClient(name);
   state.seoClients.push(c);
   state.activeSeoClientId = c.id;
@@ -5592,6 +5602,7 @@ function renderSeoKeywords(){
 }
 
 $('seoAddKeywordBtn').addEventListener('click', async () => {
+  ensureSeoState();
   const c = activeSeoClient(); if (!c) return;
   const text = $('seoNewKeyword').value.trim();
   if (!text){ toast('Type a keyword first', 'err'); return; }
@@ -5614,6 +5625,7 @@ $('seoNewKeyword').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.
 $('seoNewLocation').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('seoAddKeywordBtn').click(); } });
 
 $('seoScanAllBtn').addEventListener('click', () => {
+  ensureSeoState();
   const c = activeSeoClient(); if (!c) return;
   const pairs = [];
   c.keywords.forEach(k => k.locations.forEach(loc => pairs.push({k, loc})));
@@ -5630,6 +5642,7 @@ $('seoBulkImportBtn').addEventListener('click', () => {
 $('seoBulkCancel').addEventListener('click', () => $('seoBulkBackdrop').classList.remove('on'));
 $('seoBulkBackdrop').addEventListener('click', e => { if (e.target === $('seoBulkBackdrop')) $('seoBulkBackdrop').classList.remove('on'); });
 $('seoBulkOk').addEventListener('click', async () => {
+  ensureSeoState();
   const c = activeSeoClient(); if (!c) return;
   const defaultLoc = $('seoBulkDefaultLocation').value.trim();
   const defaultRegion = +$('seoBulkDefaultRegion').value || 0;
@@ -5749,6 +5762,20 @@ function seoSetModule(m){
 }
 $('modBtnGbp').addEventListener('click', () => seoSetModule('gbp'));
 $('modBtnSeo').addEventListener('click', () => seoSetModule('seo'));
+
+/* renderAll() runs every time the GBP tool finishes loading cloud data
+   (after sign-in) and every time a .json backup is imported — both replace
+   the whole `state` object. Wrapping it guarantees state.seoClients always
+   exists on whichever state object is currently live, and that the SEO
+   panel reflects it immediately if it's the visible module, rather than
+   only catching up the next time the person switches tabs. */
+const seoOrigRenderAll = renderAll;
+renderAll = function(){
+  seoOrigRenderAll.apply(this, arguments);
+  ensureSeoState();
+  renderSeoTree();
+  if ($('seoStage').style.display !== 'none') renderSeoAll();
+};
 
 fillRegions($('seoNewRegion'));
 fillRegions($('seoBulkDefaultRegion'));
