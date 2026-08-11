@@ -688,15 +688,18 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-kw-del:hover{color:var(--alert); background:var(--good-wash);}
 .seo-kw-body{display:none; padding:0 16px 14px 35px;}
 .seo-kw-row.open .seo-kw-body{display:block;}
-.seo-loc-row{display:grid; grid-template-columns:1.3fr .9fr auto auto 1fr auto auto; gap:8px; align-items:center; padding:8px 0; border-top:1px dashed var(--line-2);}
+.seo-loc-row{display:flex; flex-direction:column; gap:6px; padding:10px 0; border-top:1px dashed var(--line-2);}
 .seo-loc-row:first-child{border-top:none;}
-.seo-loc-row input[type=text], .seo-loc-row select{padding:7px 9px; border-radius:7px; border:1px solid var(--line); font-family:var(--ui); font-size:12.5px; background:var(--card-2); width:100%;}
+.seo-loc-top{display:grid; grid-template-columns:1.3fr auto .95fr auto auto auto auto; gap:8px; align-items:center;}
+.seo-loc-bottom{display:grid; grid-template-columns:96px 96px 1fr 74px; gap:8px; align-items:center;}
+.seo-loc-top input[type=text], .seo-loc-top select, .seo-loc-bottom input[type=text]{padding:7px 9px; border-radius:7px; border:1px solid var(--line); font-family:var(--ui); font-size:12.5px; background:var(--card-2); width:100%;}
+.seo-loc-bottom input[type=text]{font-family:var(--mono); font-size:11px;}
 .seo-loc-rank{font-family:var(--mono); font-weight:700; font-size:13px; text-align:center; min-width:34px;}
 .seo-loc-delta{font-family:var(--mono); font-size:11px; text-align:center;}
 .seo-loc-delta.up{color:var(--good);}
 .seo-loc-delta.down{color:var(--bad);}
-.seo-loc-meta{font-size:10.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.seo-loc-meta a{color:var(--ink-2);}
+.seo-loc-status{margin:0; min-height:auto; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.seo-loc-status a{color:var(--ink-2);}
 .seo-loc-btns{display:flex; gap:4px;}
 .seo-loc-add-btn{border:1px dashed var(--line); background:none; border-radius:8px; color:var(--ink-2); font-size:12px; padding:7px 10px; cursor:pointer; margin-top:8px;}
 .seo-loc-add-btn:hover{border-color:var(--brand); color:var(--brand-deep);}
@@ -705,7 +708,8 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .modal-wide textarea{width:100%; padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--line); font-family:var(--mono); font-size:12.5px; resize:vertical;}
 @media (max-width:900px){
   .seo-kw-add{grid-template-columns:1fr 1fr;}
-  .seo-loc-row{grid-template-columns:1fr 1fr; row-gap:6px;}
+  .seo-loc-top{grid-template-columns:1fr 1fr; row-gap:6px;}
+  .seo-loc-bottom{grid-template-columns:1fr 1fr; row-gap:6px;}
 }
 .auth-screen{
   position:fixed; inset:0; z-index:9000; display:none; place-items:center;
@@ -5315,11 +5319,11 @@ async function seoResolveLocation(client, loc){
   if (!key) return null;
   const cached = client.locationCache[key];
   if (cached && cached.lat != null) return cached;
-  const region = REGIONS[loc.regionIdx || 0] || REGIONS[0];
-  const q = loc.label + (region ? ', ' + region.gl : '');
-  const hit = await nominatim(q);
+  // Same lookup the GBP grid's "Area to test" Find button uses: the place
+  // name goes to Nominatim exactly as typed, so it resolves identically.
+  const hit = await nominatim(loc.label.trim());
   if (hit){
-    const g = { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) };
+    const g = { lat: parseFloat(parseFloat(hit.lat).toFixed(7)), lng: parseFloat(parseFloat(hit.lon).toFixed(7)) };
     client.locationCache[key] = g;
     return g;
   }
@@ -5485,17 +5489,48 @@ function seoLocationRow(c, k, loc){
   const row = document.createElement('div');
   row.className = 'seo-loc-row';
 
+  /* ---- top line: what to search & where ---- */
+  const top = document.createElement('div');
+  top.className = 'seo-loc-top';
+
   const labelInput = document.createElement('input');
-  labelInput.type = 'text'; labelInput.placeholder = 'City, region\u2026'; labelInput.value = loc.label || '';
+  labelInput.type = 'text'; labelInput.placeholder = 'Address, city or place name\u2026'; labelInput.value = loc.label || '';
   labelInput.addEventListener('change', () => {
-    if (labelInput.value.trim() !== loc.label){ loc.lat = null; loc.lng = null; }
-    loc.label = labelInput.value.trim(); save();
+    const v = labelInput.value.trim();
+    if (v !== loc.label){ loc.lat = null; loc.lng = null; latInput.value = ''; lngInput.value = ''; setStatus(statusEl, 'Location changed \u2014 click Find to re-pin it.', ''); }
+    loc.label = v; save();
+  });
+
+  const findBtn = document.createElement('button');
+  findBtn.type = 'button'; findBtn.className = 'btn btn-sm'; findBtn.textContent = 'Find';
+  findBtn.title = 'Look up exact coordinates for this location';
+  findBtn.addEventListener('click', async () => {
+    const q = labelInput.value.trim();
+    if (!q){ setStatus(statusEl, 'Type an address or place name first.', 'err'); return; }
+    findBtn.disabled = true;
+    setStatus(statusEl, 'Looking up ' + q + '\u2026', 'busy');
+    try{
+      // Same lookup the GBP grid uses for its "Area to test" step: the
+      // place name goes to Nominatim exactly as typed, with no guessed
+      // country/region code tacked on, so it resolves the same way here.
+      const hit = await nominatim(q);
+      if (!hit){ setStatus(statusEl, 'No match. Add the city or province and try again.', 'err'); return; }
+      loc.label = q; loc.lat = parseFloat(parseFloat(hit.lat).toFixed(7)); loc.lng = parseFloat(parseFloat(hit.lon).toFixed(7));
+      latInput.value = loc.lat; lngInput.value = loc.lng;
+      c.locationCache[q.toLowerCase()] = {lat: loc.lat, lng: loc.lng};
+      setStatus(statusEl, hit.display_name, 'ok');
+      save();
+    }catch(err){
+      setStatus(statusEl, 'Lookup failed: ' + ((err && err.message) || err), 'err');
+    }finally{
+      findBtn.disabled = false;
+    }
   });
 
   const regionSel = document.createElement('select');
   fillRegions(regionSel);
   regionSel.value = loc.regionIdx || 0;
-  regionSel.addEventListener('change', () => { loc.regionIdx = +regionSel.value; loc.lat = null; loc.lng = null; save(); });
+  regionSel.addEventListener('change', () => { loc.regionIdx = +regionSel.value; save(); });
 
   const rankBox = document.createElement('div');
   rankBox.innerHTML = seoRankPill(loc.rank) + (loc.manual ? '<span class="seo-manual-tag">manual</span>' : '');
@@ -5513,26 +5548,6 @@ function seoLocationRow(c, k, loc){
   } else {
     deltaBox.textContent = '\u2014';
   }
-
-  const meta = document.createElement('div');
-  meta.className = 'seo-loc-meta';
-  if (loc.error) meta.innerHTML = '<span style="color:var(--alert)">' + esc(loc.error) + '</span>';
-  else if (loc.sourceUrl) meta.innerHTML = esc(fmtWhen(loc.checkedAt)) + ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">source</a>';
-  else meta.textContent = 'never checked';
-
-  const rankInput = document.createElement('input');
-  rankInput.type = 'text'; rankInput.inputMode = 'numeric'; rankInput.placeholder = 'set #';
-  rankInput.style.maxWidth = '64px'; rankInput.title = 'Type a rank to override manually (0 = not ranking)';
-  rankInput.addEventListener('change', () => {
-    const v = rankInput.value.trim();
-    if (v === '') return;
-    const n = parseInt(v, 10);
-    if (isNaN(n) || n < 0){ toast('Enter a whole number \u2014 0 means not ranking', 'err'); rankInput.value = ''; return; }
-    loc.prevRank = loc.rank; loc.rank = n; loc.manual = true; loc.checkedAt = Date.now(); loc.error = null;
-    loc.history = loc.history || []; loc.history.push({rank:n, checkedAt:loc.checkedAt, manual:true});
-    save(); renderSeoKeywords();
-    toast('Rank set manually');
-  });
 
   const btns = document.createElement('div');
   btns.className = 'seo-loc-btns';
@@ -5552,7 +5567,55 @@ function seoLocationRow(c, k, loc){
   });
   btns.appendChild(rescanBtn); btns.appendChild(delBtn);
 
-  [labelInput, regionSel, rankBox, deltaBox, meta, rankInput, btns].forEach(el => row.appendChild(el));
+  [labelInput, findBtn, regionSel, rankBox, deltaBox, btns].forEach(el => top.appendChild(el));
+
+  /* ---- bottom line: the pinned coordinates that actually get searched,
+     visible and editable just like the GBP grid's Latitude/Longitude
+     fields, plus a status line and the manual rank override ---- */
+  const bottom = document.createElement('div');
+  bottom.className = 'seo-loc-bottom';
+
+  const latInput = document.createElement('input');
+  latInput.type = 'text'; latInput.inputMode = 'decimal'; latInput.placeholder = 'Latitude';
+  latInput.value = loc.lat != null ? loc.lat : '';
+  latInput.addEventListener('change', () => {
+    const v = parseFloat(latInput.value);
+    loc.lat = isNaN(v) ? null : v; save();
+  });
+
+  const lngInput = document.createElement('input');
+  lngInput.type = 'text'; lngInput.inputMode = 'decimal'; lngInput.placeholder = 'Longitude';
+  lngInput.value = loc.lng != null ? loc.lng : '';
+  lngInput.addEventListener('change', () => {
+    const v = parseFloat(lngInput.value);
+    loc.lng = isNaN(v) ? null : v; save();
+  });
+
+  const statusEl = document.createElement('div');
+  statusEl.className = 'status seo-loc-status';
+  if (loc.error) setStatus(statusEl, loc.error, 'err');
+  else if (loc.sourceUrl) statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) + ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">source</a>';
+  else if (loc.lat != null) setStatus(statusEl, 'Pinned \u2014 ready to scan.', 'ok');
+  else setStatus(statusEl, 'Click Find to pin this location precisely, or Scan to pin it automatically.', '');
+
+  const rankInput = document.createElement('input');
+  rankInput.type = 'text'; rankInput.inputMode = 'numeric'; rankInput.placeholder = 'set #';
+  rankInput.title = 'Type a rank to override manually (0 = not ranking)';
+  rankInput.addEventListener('change', () => {
+    const v = rankInput.value.trim();
+    if (v === '') return;
+    const n = parseInt(v, 10);
+    if (isNaN(n) || n < 0){ toast('Enter a whole number \u2014 0 means not ranking', 'err'); rankInput.value = ''; return; }
+    loc.prevRank = loc.rank; loc.rank = n; loc.manual = true; loc.checkedAt = Date.now(); loc.error = null;
+    loc.history = loc.history || []; loc.history.push({rank:n, checkedAt:loc.checkedAt, manual:true});
+    save(); renderSeoKeywords();
+    toast('Rank set manually');
+  });
+
+  [latInput, lngInput, statusEl, rankInput].forEach(el => bottom.appendChild(el));
+
+  row.appendChild(top);
+  row.appendChild(bottom);
   return row;
 }
 
