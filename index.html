@@ -697,6 +697,14 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-scan-bar{flex:1; height:6px; border-radius:4px; background:#f3d9bf; overflow:hidden;}
 .seo-scan-bar i{display:block; height:100%; width:0%; background:var(--brand); transition:width .2s var(--ease);}
 
+.seo-bulk-bar{display:flex; align-items:center; gap:16px; padding:12px 18px; border-bottom:1px solid var(--line-2); background:var(--card-2); font-size:12px; flex-wrap:wrap;}
+.seo-bulk-bar label{display:flex; align-items:center; gap:7px; cursor:pointer; color:var(--ink-2); font-weight:600; white-space:nowrap;}
+.seo-bulk-bar input[type=checkbox]{width:15px; height:15px; accent-color:var(--brand); cursor:pointer; flex:none;}
+.seo-bulk-link{border:none; background:none; color:var(--ink-2); text-decoration:underline; text-decoration-color:var(--line); cursor:pointer; font-size:12px; padding:0; font-weight:600; white-space:nowrap;}
+.seo-bulk-link:hover{color:var(--brand-deep); text-decoration-color:var(--brand);}
+.seo-bulk-spacer{flex:1; min-width:8px;}
+.seo-bulk-count{color:var(--ink-3); font-weight:600; white-space:nowrap;}
+.seo-kw-check{width:15px; height:15px; accent-color:var(--brand); cursor:pointer; flex:none;}
 .seo-kw-empty{padding:44px 24px; text-align:center; color:var(--ink-3); font-size:13px; line-height:1.7;}
 .seo-kw-row{border-bottom:1px solid var(--line-2); transition:background .12s var(--ease);}
 .seo-kw-row:last-child{border-bottom:none;}
@@ -1654,6 +1662,14 @@ body.embed-mode #mapCard{box-shadow:none;}
           </div>
 
           <div class="tbl-card">
+            <div class="seo-bulk-bar" id="seoBulkBar">
+              <label><input type="checkbox" id="seoSelectAllCheck"/> Select all</label>
+              <button type="button" class="seo-bulk-link" id="seoSelectNoLocBtn">Select keywords without a location</button>
+              <div class="seo-bulk-spacer"></div>
+              <span class="seo-bulk-count" id="seoBulkCountLabel">0 selected</span>
+              <button class="btn btn-sm" id="seoDeleteSelBtn" disabled style="color:var(--alert)">Delete selected</button>
+              <button class="btn btn-sm btn-dark" id="seoApplyLocBtn" disabled>Apply location to selected</button>
+            </div>
             <div id="seoKeywordList"></div>
             <div class="seo-kw-empty" id="seoKeywordEmpty" style="display:none">
               No keywords yet. Type one above and press <b>Add keyword</b>, or use <b>Bulk import…</b> to drop in a whole list at once.
@@ -1691,6 +1707,26 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
     <div class="acts">
       <button class="btn" id="seoBulkCancel">Cancel</button>
       <button class="btn btn-go" id="seoBulkOk">Import &amp; scan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SEO APPLY-LOCATION-TO-SELECTED MODAL ==================== -->
+<div class="backdrop" id="seoApplyLocBackdrop">
+  <div class="modal">
+    <h3>Add a location to selected keywords</h3>
+    <p id="seoApplyLocCount">Applies to the selected keywords.</p>
+    <div class="f">
+      <label for="seoApplyLocInput">Location</label>
+      <input id="seoApplyLocInput" type="text" placeholder="Red Deer, AB" autocomplete="off"/>
+    </div>
+    <div class="f">
+      <label for="seoApplyLocRegion">Region</label>
+      <select id="seoApplyLocRegion"></select>
+    </div>
+    <div class="acts">
+      <button class="btn" id="seoApplyLocCancel">Cancel</button>
+      <button class="btn btn-go" id="seoApplyLocOk">Add &amp; scan</button>
     </div>
   </div>
 </div>
@@ -5762,8 +5798,12 @@ function seoLocationRow(c, k, loc){
   row.appendChild(bottom);
   return row;
 }
+let seoSelectedKwIds = new Set();
+let seoSelectedForClientId = null;
+
 function renderSeoKeywords(){
   const c = activeSeoClient(); if (!c) return;
+  if (seoSelectedForClientId !== c.id){ seoSelectedKwIds = new Set(); seoSelectedForClientId = c.id; }
   const wrap = $('seoKeywordList');
   wrap.innerHTML = '';
   $('seoKeywordEmpty').style.display = c.keywords.length ? 'none' : '';
@@ -5773,19 +5813,26 @@ function renderSeoKeywords(){
     const head = document.createElement('div');
     head.className = 'seo-kw-head';
     const best = seoKeywordBestRank(k);
-    head.innerHTML = '<span class="seo-kw-caret"></span>' +
+    head.innerHTML = '<input type="checkbox" class="seo-kw-check" ' + (seoSelectedKwIds.has(k.id) ? 'checked' : '') + '/>' +
+      '<span class="seo-kw-caret"></span>' +
       '<span class="seo-kw-text">' + esc(k.text) + '</span>' +
       '<span class="seo-kw-locs-count">' + k.locations.length + ' loc' + (k.locations.length === 1 ? '' : 's') + '</span>' +
       seoRankPill(best) +
       '<button class="seo-kw-del" title="Delete keyword"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>';
+    head.querySelector('.seo-kw-check').addEventListener('click', e => e.stopPropagation());
+    head.querySelector('.seo-kw-check').addEventListener('change', e => {
+      if (e.target.checked) seoSelectedKwIds.add(k.id); else seoSelectedKwIds.delete(k.id);
+      renderSeoBulkBar(c);
+    });
     head.addEventListener('click', e => {
-      if (e.target.closest('.seo-kw-del')) return;
+      if (e.target.closest('.seo-kw-del') || e.target.closest('.seo-kw-check')) return;
       k._open = !k._open; renderSeoKeywords();
     });
     head.querySelector('.seo-kw-del').addEventListener('click', e => {
       e.stopPropagation();
       if (!confirm('Delete \u201c' + k.text + '\u201d and all of its tracked locations?')) return;
       c.keywords = c.keywords.filter(w => w.id !== k.id);
+      seoSelectedKwIds.delete(k.id);
       save(); renderSeoKeywords();
     });
     row.appendChild(head);
@@ -5805,7 +5852,78 @@ function renderSeoKeywords(){
     row.appendChild(body);
     wrap.appendChild(row);
   });
+  renderSeoBulkBar(c);
 }
+
+function renderSeoBulkBar(c){
+  c = c || activeSeoClient(); if (!c) return;
+  const n = seoSelectedKwIds.size;
+  $('seoBulkCountLabel').textContent = n + ' selected';
+  $('seoApplyLocBtn').disabled = n === 0;
+  $('seoDeleteSelBtn').disabled = n === 0;
+  const total = c.keywords.length;
+  $('seoSelectAllCheck').checked = total > 0 && n === total;
+  $('seoSelectAllCheck').indeterminate = n > 0 && n < total;
+}
+
+$('seoSelectAllCheck').addEventListener('change', e => {
+  const c = activeSeoClient(); if (!c) return;
+  if (e.target.checked) c.keywords.forEach(k => seoSelectedKwIds.add(k.id));
+  else seoSelectedKwIds.clear();
+  renderSeoKeywords();
+});
+$('seoSelectNoLocBtn').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  seoSelectedKwIds = new Set(c.keywords.filter(k => !k.locations.length).map(k => k.id));
+  seoSelectedForClientId = c.id;
+  if (!seoSelectedKwIds.size){ toast('Every keyword already has at least one location', 'ok'); }
+  renderSeoKeywords();
+});
+
+/* ---------- apply a location to every selected keyword at once ---------- */
+$('seoApplyLocBtn').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  if (!seoSelectedKwIds.size) return;
+  $('seoApplyLocCount').textContent = 'Applies to ' + seoSelectedKwIds.size + ' selected keyword' + (seoSelectedKwIds.size === 1 ? '' : 's') + '.';
+  $('seoApplyLocInput').value = ''; 
+  $('seoApplyLocBackdrop').classList.add('on');
+  setTimeout(() => $('seoApplyLocInput').focus(), 40);
+});
+$('seoApplyLocCancel').addEventListener('click', () => $('seoApplyLocBackdrop').classList.remove('on'));
+$('seoApplyLocBackdrop').addEventListener('click', e => { if (e.target === $('seoApplyLocBackdrop')) $('seoApplyLocBackdrop').classList.remove('on'); });
+$('seoApplyLocOk').addEventListener('click', async () => {
+  ensureSeoState();
+  const c = activeSeoClient(); if (!c) return;
+  const label = $('seoApplyLocInput').value.trim();
+  const regionIdx = +$('seoApplyLocRegion').value || 0;
+  if (!label){ toast('Type a location first', 'err'); return; }
+  const pairs = [];
+  c.keywords.forEach(k => {
+    if (!seoSelectedKwIds.has(k.id)) return;
+    if (k.locations.some(l => l.label.toLowerCase() === label.toLowerCase())) return;
+    const loc = blankSeoLocation(label, regionIdx);
+    k.locations.push(loc);
+    pairs.push({k, loc});
+  });
+  $('seoApplyLocBackdrop').classList.remove('on');
+  save(); renderSeoKeywords();
+  if (!pairs.length){ toast('Every selected keyword already had that location', 'ok'); return; }
+  toast('Added \u201c' + label + '\u201d to ' + pairs.length + ' keyword' + (pairs.length === 1 ? '' : 's') + ' \u2014 scanning now\u2026');
+  await seoScanAndRender(c, pairs);
+});
+
+$('seoDeleteSelBtn').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  const n = seoSelectedKwIds.size;
+  if (!n) return;
+  const names = c.keywords.filter(k => seoSelectedKwIds.has(k.id)).map(k => k.text);
+  const preview = names.slice(0, 3).join(', ') + (names.length > 3 ? ', +' + (names.length - 3) + ' more' : '');
+  if (!confirm('Delete ' + n + ' keyword' + (n === 1 ? '' : 's') + ' and all of their tracked locations?\n\n' + preview + '\n\nThis can\u2019t be undone.')) return;
+  c.keywords = c.keywords.filter(k => !seoSelectedKwIds.has(k.id));
+  seoSelectedKwIds.clear();
+  save(); renderSeoKeywords();
+  toast(n + ' keyword' + (n === 1 ? '' : 's') + ' deleted');
+});
 
 $('seoAddKeywordBtn').addEventListener('click', async () => {
   ensureSeoState();
@@ -6067,6 +6185,7 @@ renderAll = function(){
 
 fillRegions($('seoNewRegion'));
 fillRegions($('seoBulkDefaultRegion'));
+fillRegions($('seoApplyLocRegion'));
 
 // Never take over the public embed view — it uses the same #appShell.
 if (typeof EMBED_ID === 'undefined' || !EMBED_ID){
