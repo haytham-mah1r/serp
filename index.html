@@ -1674,6 +1674,7 @@ body.embed-mode #mapCard{box-shadow:none;}
               <div class="seo-bulk-spacer"></div>
               <span class="seo-bulk-count" id="seoBulkCountLabel">0 selected</span>
               <button class="btn btn-sm" id="seoDeleteSelBtn" disabled style="color:var(--alert)">Delete selected</button>
+              <button class="btn btn-sm" id="seoRemoveLocBtn" disabled>Remove location…</button>
               <button class="btn btn-sm btn-dark" id="seoApplyLocBtn" disabled>Apply location to selected</button>
             </div>
             <div id="seoKeywordList"></div>
@@ -1744,6 +1745,23 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
     <div class="acts">
       <button class="btn" id="seoApplyLocCancel">Cancel</button>
       <button class="btn btn-go" id="seoApplyLocOk">Add &amp; scan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SEO REMOVE-LOCATION-FROM-SELECTED MODAL ==================== -->
+<div class="backdrop" id="seoRemoveLocBackdrop">
+  <div class="modal">
+    <h3>Remove a location from selected keywords</h3>
+    <p id="seoRemoveLocCount">Choose a location tracked by the selected keywords.</p>
+    <div class="f">
+      <label for="seoRemoveLocSelect">Location</label>
+      <select id="seoRemoveLocSelect"></select>
+    </div>
+    <div class="status" id="seoRemoveLocStatus"></div>
+    <div class="acts">
+      <button class="btn" id="seoRemoveLocCancel">Cancel</button>
+      <button class="btn" id="seoRemoveLocOk" style="color:var(--alert)">Remove location</button>
     </div>
   </div>
 </div>
@@ -5896,6 +5914,7 @@ function renderSeoBulkBar(c){
   $('seoBulkCountLabel').textContent = n + ' selected';
   $('seoApplyLocBtn').disabled = n === 0;
   $('seoDeleteSelBtn').disabled = n === 0;
+  $('seoRemoveLocBtn').disabled = n === 0;
   const total = c.keywords.length;
   $('seoSelectAllCheck').checked = total > 0 && n === total;
   $('seoSelectAllCheck').indeterminate = n > 0 && n < total;
@@ -5991,6 +6010,53 @@ $('seoDeleteSelBtn').addEventListener('click', () => {
   seoSelectedKwIds.clear();
   save(); renderSeoKeywords();
   toast(n + ' keyword' + (n === 1 ? '' : 's') + ' deleted');
+});
+
+/* ---------- remove a location from every selected keyword ---------- */
+$('seoRemoveLocBtn').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  if (!seoSelectedKwIds.size) return;
+  const counts = new Map(); // lowercased label -> {label, count}
+  c.keywords.forEach(k => {
+    if (!seoSelectedKwIds.has(k.id)) return;
+    k.locations.forEach(l => {
+      const key = (l.label || '').toLowerCase();
+      if (!key) return;
+      const entry = counts.get(key) || {label: l.label, count: 0};
+      entry.count++;
+      counts.set(key, entry);
+    });
+  });
+  const sel = $('seoRemoveLocSelect');
+  sel.innerHTML = '';
+  if (!counts.size){
+    setStatus($('seoRemoveLocStatus'), 'None of the selected keywords have a location yet.', 'err');
+    sel.appendChild(new Option('\u2014 no locations to remove \u2014', ''));
+  } else {
+    setStatus($('seoRemoveLocStatus'), '', '');
+    Array.from(counts.values())
+      .sort((a, b) => b.count - a.count)
+      .forEach(entry => sel.appendChild(new Option(entry.label + ' (' + entry.count + ' keyword' + (entry.count === 1 ? '' : 's') + ')', entry.label)));
+  }
+  $('seoRemoveLocCount').textContent = 'Across the ' + seoSelectedKwIds.size + ' selected keyword' + (seoSelectedKwIds.size === 1 ? '' : 's') + ':';
+  $('seoRemoveLocBackdrop').classList.add('on');
+});
+$('seoRemoveLocCancel').addEventListener('click', () => $('seoRemoveLocBackdrop').classList.remove('on'));
+$('seoRemoveLocBackdrop').addEventListener('click', e => { if (e.target === $('seoRemoveLocBackdrop')) $('seoRemoveLocBackdrop').classList.remove('on'); });
+$('seoRemoveLocOk').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  const label = $('seoRemoveLocSelect').value;
+  if (!label){ $('seoRemoveLocBackdrop').classList.remove('on'); return; }
+  let removed = 0;
+  c.keywords.forEach(k => {
+    if (!seoSelectedKwIds.has(k.id)) return;
+    const before = k.locations.length;
+    k.locations = k.locations.filter(l => (l.label || '').toLowerCase() !== label.toLowerCase());
+    removed += before - k.locations.length;
+  });
+  $('seoRemoveLocBackdrop').classList.remove('on');
+  save(); renderSeoKeywords();
+  toast('Removed \u201c' + label + '\u201d from ' + removed + ' keyword' + (removed === 1 ? '' : 's'));
 });
 
 $('seoAddKeywordBtn').addEventListener('click', async () => {
