@@ -5330,6 +5330,43 @@ async function seoResolveLocation(client, loc){
   return null;
 }
 
+/* The shared normalizeDfs() intentionally prefers local-pack listings over
+   organic ones when surface='web' — that's correct for the GBP tool's own
+   job (does this GBP profile appear in the map pack embedded in a web
+   search?), but wrong for tracking a website's true organic position: a
+   local pack sitting above the blue links would otherwise hide the real
+   organic rank entirely and report "not found". This reads the raw
+   DataForSEO/Serper response directly and keeps only genuine organic
+   (type==='organic') results, in order — exactly what "rank #4 organically"
+   means, and exactly what the SERP checker's own live Google tab shows. */
+function seoNormalizeDfsOrganic(data){
+  const result = ((((data.tasks || [])[0] || {}).result || [])[0]) || {};
+  const items = result.items || [];
+  const organic = items.filter(i => i.type === 'organic').map(it => ({
+    title: it.title || '', domain: it.domain || (it.url ? cleanDomain(it.url) : null), url: it.url || null
+  })).filter(x => x.title);
+  return {organic};
+}
+function seoNormalizeSerperOrganic(data){
+  const organic = (data.organic || []).map(x => ({
+    title: x.title || '', domain: x.link ? cleanDomain(x.link) : null, url: x.link || null
+  })).filter(x => x.title);
+  return {organic};
+}
+async function seoOrganicQuery(keyword, p, region, opts){
+  const prov = state.settings.provider || 'dataforseo';
+  if (prov === 'serper'){
+    const data = await serperQuery(keyword, p, region, 'web', opts);
+    return seoNormalizeSerperOrganic(data);
+  }
+  if (prov === 'direct'){
+    const err = new Error('Relay/direct mode isn\u2019t supported for keyword rank tracking yet \u2014 switch to DataForSEO or Serper on step 4 (GBP Locations).');
+    err.fatal = true; throw err;
+  }
+  const data = await dfsQuery(keyword, p, region, 'web', opts);
+  return seoNormalizeDfsOrganic(data);
+}
+
 async function seoScanOne(client, kw, loc){
   if (!loc.label || !loc.label.trim()){ loc.error = 'Add a location first.'; return; }
   if (!client.website || !client.website.trim()){ loc.error = 'Add this client\'s website on the Dashboard tab first.'; return; }
@@ -5343,7 +5380,7 @@ async function seoScanOne(client, kw, loc){
   loc.lat = g.lat; loc.lng = g.lng;
   try{
     const depth = state.settings.depth || 100;
-    const data = await providerQuery(kw.text, {lat:g.lat, lng:g.lng}, region, 'web', {depth});
+    const data = await seoOrganicQuery(kw.text, {lat:g.lat, lng:g.lng}, region, {depth});
     const organic = data.organic || [];
     let found = null, idx = -1;
     for (let i = 0; i < organic.length; i++){
