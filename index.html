@@ -1876,6 +1876,7 @@ window.EDGE_LOGO_RATIO = 512/200;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -6468,16 +6469,35 @@ $('seoBulkOk').addEventListener('click', async () => {
 });
 
 /* ---------- export to Excel (SheetJS, actual .xlsx — not just CSV) ---------- */
+/* Rank -> the same four buckets the client's own Agency Analytics-style
+   sheet uses, so this column can be copy-pasted straight across without
+   reformatting. Google counts ~10 organic results per results page. */
+function seoMonitoringCell(rank){
+  if (rank == null) return null; // never scanned — leave the cell blank, don't guess
+  if (rank === 0) return '3rd page or lower';
+  if (rank <= 3) return 'Top 3 on 1st page';
+  if (rank <= 10) return '1st page';
+  if (rank <= 20) return '2nd page';
+  return '3rd page or lower';
+}
+const SEO_MONITORING_OPTIONS = ['Top 3 on 1st page', '1st page', '2nd page', '3rd page or lower'];
+const SEO_MONITORING_COLORS = {
+  'Top 3 on 1st page': {fill: 'FF2E7D32', font: 'FFFFFFFF'},
+  '1st page':          {fill: 'FFC6E9C9', font: 'FF1E4620'},
+  '2nd page':          {fill: 'FFFFD9A8', font: 'FF7A4A00'},
+  '3rd page or lower': {fill: 'FFE15C4E', font: 'FFFFFFFF'}
+};
+
 function seoBuildRows(clients){
   const rows = [];
   clients.forEach(c => {
     if (!c.keywords.length){
-      rows.push({Client:c.name, Keyword:'', Location:'', Region:'', Rank:'', 'Previous Rank':'', 'Last Checked':'', 'Matched Page':'', 'Source Link':'', Manual:''});
+      rows.push({Client:c.name, Keyword:'', Location:'', Region:'', Rank:'', Cell:null, PrevRank:'', LastChecked:'', MatchedPage:'', SourceLink:'', Manual:''});
       return;
     }
     c.keywords.forEach(k => {
       if (!k.locations.length){
-        rows.push({Client:c.name, Keyword:k.text, Location:'', Region:'', Rank:'', 'Previous Rank':'', 'Last Checked':'', 'Matched Page':'', 'Source Link':'', Manual:''});
+        rows.push({Client:c.name, Keyword:k.text, Location:'', Region:'', Rank:'', Cell:null, PrevRank:'', LastChecked:'', MatchedPage:'', SourceLink:'', Manual:''});
         return;
       }
       k.locations.forEach(loc => {
@@ -6485,9 +6505,10 @@ function seoBuildRows(clients){
         rows.push({
           Client: c.name, Keyword: k.text, Location: loc.label || '', Region: region.label || '',
           Rank: loc.rank == null ? '' : (loc.rank === 0 ? 'Not in top results' : loc.rank),
-          'Previous Rank': loc.prevRank == null ? '' : (loc.prevRank === 0 ? 'Not in top results' : loc.prevRank),
-          'Last Checked': loc.checkedAt ? new Date(loc.checkedAt).toLocaleString() : '',
-          'Matched Page': loc.matchedDomain || '', 'Source Link': loc.sourceUrl || '',
+          Cell: seoMonitoringCell(loc.rank),
+          PrevRank: loc.prevRank == null ? '' : (loc.prevRank === 0 ? 'Not in top results' : loc.prevRank),
+          LastChecked: loc.checkedAt ? new Date(loc.checkedAt).toLocaleString() : '',
+          MatchedPage: loc.matchedDomain || '', SourceLink: loc.sourceUrl || '',
           Manual: loc.manual ? 'Yes' : ''
         });
       });
@@ -6495,24 +6516,65 @@ function seoBuildRows(clients){
   });
   return rows;
 }
-function seoExportXlsx(clients, filename){
-  if (typeof XLSX === 'undefined'){ toast('Export library failed to load \u2014 check your connection', 'err'); return; }
+
+async function seoExportXlsx(clients, filename){
+  if (typeof ExcelJS === 'undefined'){ toast('Export library failed to load \u2014 check your connection', 'err'); return; }
   const rows = seoBuildRows(clients);
   if (!rows.length){ toast('Nothing to export yet', 'err'); return; }
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{wch:22},{wch:30},{wch:18},{wch:20},{wch:9},{wch:13},{wch:19},{wch:24},{wch:44},{wch:8}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Keyword Rankings');
-  XLSX.writeFile(wb, filename);
+
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Keyword Rankings');
+  ws.columns = [
+    {header:'Client', key:'Client', width:22},
+    {header:'Keyword', key:'Keyword', width:32},
+    {header:'Location', key:'Location', width:18},
+    {header:'Region', key:'Region', width:20},
+    {header:'Rank', key:'Rank', width:9},
+    {header:'Monitoring Cell (Current Ranking)', key:'Cell', width:24},
+    {header:'Previous Rank', key:'PrevRank', width:13},
+    {header:'Last Checked', key:'LastChecked', width:19},
+    {header:'Matched Page', key:'MatchedPage', width:24},
+    {header:'Source Link', key:'SourceLink', width:44},
+    {header:'Manual', key:'Manual', width:8}
+  ];
+  ws.getRow(1).font = {bold:true};
+  ws.getRow(1).fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FFF3F6F8'}};
+  ws.views = [{state:'frozen', ySplit:1}];
+
+  rows.forEach(r => ws.addRow(r));
+
+  const cellColIdx = ws.getColumn('Cell').number;
+  for (let i = 2; i <= rows.length + 1; i++){
+    const cell = ws.getRow(i).getCell(cellColIdx);
+    cell.dataValidation = {
+      type: 'list', allowBlank: true,
+      formulae: ['"' + SEO_MONITORING_OPTIONS.join(',') + '"']
+    };
+    const value = cell.value;
+    if (value && SEO_MONITORING_COLORS[value]){
+      const colors = SEO_MONITORING_COLORS[value];
+      cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:colors.fill}};
+      cell.font = {color:{argb:colors.font}, bold:true};
+      cell.alignment = {horizontal:'center'};
+    }
+  }
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
   toast('Exported ' + filename);
 }
-$('seoExportClientBtn').addEventListener('click', () => {
+$('seoExportClientBtn').addEventListener('click', async () => {
   const c = activeSeoClient(); if (!c) return;
-  seoExportXlsx([c], (c.name || 'client').replace(/[^a-z0-9]+/gi, '_') + '_rankings.xlsx');
+  await seoExportXlsx([c], (c.name || 'client').replace(/[^a-z0-9]+/gi, '_') + '_rankings.xlsx');
 });
-$('seoExportAllBtn').addEventListener('click', () => {
+$('seoExportAllBtn').addEventListener('click', async () => {
   if (!state.seoClients.length){ toast('No SEO clients yet', 'err'); return; }
-  seoExportXlsx(state.seoClients, 'seo_clients_rankings.xlsx');
+  await seoExportXlsx(state.seoClients, 'seo_clients_rankings.xlsx');
 });
 
 /* ---------- import clients from a .json list ----------
