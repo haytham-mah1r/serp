@@ -714,7 +714,12 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-kw-row.open .seo-kw-caret{transform:rotate(45deg);}
 .seo-kw-row.open{background:var(--card-2);}
 .seo-kw-text{flex:1; font-weight:600; font-size:14px; color:var(--ink); letter-spacing:-.005em;}
+.seo-kw-city{width:150px; flex:none; font-size:11.5px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .seo-kw-locs-count{font-size:10.5px; color:var(--ink-3); background:var(--card); border:1px solid var(--line); border-radius:20px; padding:3px 10px; flex:none;}
+.seo-kw-source{width:30px; height:30px; flex:none; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; color:var(--ink-3); transition:all .12s var(--ease);}
+.seo-kw-source svg{width:13px; height:13px; stroke:currentColor;}
+.seo-kw-source:hover{color:var(--brand-deep); background:var(--brand-wash);}
+.seo-kw-source.disabled{opacity:.3; cursor:default; pointer-events:none;}
 .seo-kw-del{border:none; background:none; color:var(--ink-3); cursor:pointer; padding:6px; border-radius:7px; display:inline-flex; flex:none; transition:all .12s var(--ease);}
 .seo-kw-del svg{width:14px; height:14px; stroke:currentColor;}
 .seo-kw-del:hover{color:var(--alert); background:#fbe6df;}
@@ -763,6 +768,7 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
   .seo-kw-add{grid-template-columns:1fr 1fr;}
   .seo-loc-top{grid-template-columns:1fr 1fr; row-gap:6px;}
   .seo-loc-adv-coords{grid-template-columns:1fr 1fr;}
+  .seo-kw-city{display:none;}
 }
 .auth-screen{
   position:fixed; inset:0; z-index:9000; display:none; place-items:center;
@@ -1718,7 +1724,18 @@ custom home builder | Red Deer, AB; Calgary, AB"></textarea>
     <p id="seoApplyLocCount">Applies to the selected keywords.</p>
     <div class="f">
       <label for="seoApplyLocInput">Location</label>
-      <input id="seoApplyLocInput" type="text" placeholder="Red Deer, AB" autocomplete="off"/>
+      <div class="g-inline">
+        <input id="seoApplyLocInput" type="text" placeholder="Red Deer, AB" autocomplete="off"/>
+        <button class="btn" id="seoApplyLocFindBtn" type="button">Find</button>
+      </div>
+      <div class="status" id="seoApplyLocStatus"></div>
+    </div>
+    <div class="f">
+      <span class="lbl">Coordinates <span class="opt">pinned once, used for every selected keyword</span></span>
+      <div class="coord">
+        <div><span>Latitude</span><input id="seoApplyLocLat" type="text" inputmode="decimal" placeholder="52.2690628"/></div>
+        <div><span>Longitude</span><input id="seoApplyLocLng" type="text" inputmode="decimal" placeholder="-113.8141464"/></div>
+      </div>
     </div>
     <div class="f">
       <label for="seoApplyLocRegion">Region</label>
@@ -5801,6 +5818,17 @@ function seoLocationRow(c, k, loc){
 let seoSelectedKwIds = new Set();
 let seoSelectedForClientId = null;
 
+function seoKeywordCityText(k){
+  if (!k.locations.length) return '\u2014';
+  if (k.locations.length === 1) return k.locations[0].label || '\u2014';
+  const labels = k.locations.map(l => l.label).filter(Boolean);
+  return labels.length ? labels[0] + ' +' + (k.locations.length - 1) : k.locations.length + ' locations';
+}
+function seoKeywordSourceUrl(k){
+  if (k.locations.length !== 1) return null;
+  return k.locations[0].sourceUrl || null;
+}
+
 function renderSeoKeywords(){
   const c = activeSeoClient(); if (!c) return;
   if (seoSelectedForClientId !== c.id){ seoSelectedKwIds = new Set(); seoSelectedForClientId = c.id; }
@@ -5813,11 +5841,18 @@ function renderSeoKeywords(){
     const head = document.createElement('div');
     head.className = 'seo-kw-head';
     const best = seoKeywordBestRank(k);
+    const sourceUrl = seoKeywordSourceUrl(k);
+    const sourceHtml = sourceUrl
+      ? '<a class="seo-kw-source" href="' + esc(sourceUrl) + '" target="_blank" rel="noopener" title="Open the live search result">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg></a>'
+      : '<span class="seo-kw-source disabled" title="Not scanned yet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg></span>';
     head.innerHTML = '<input type="checkbox" class="seo-kw-check" ' + (seoSelectedKwIds.has(k.id) ? 'checked' : '') + '/>' +
       '<span class="seo-kw-caret"></span>' +
       '<span class="seo-kw-text">' + esc(k.text) + '</span>' +
+      '<span class="seo-kw-city" title="' + esc(seoKeywordCityText(k)) + '">' + esc(seoKeywordCityText(k)) + '</span>' +
       '<span class="seo-kw-locs-count">' + k.locations.length + ' loc' + (k.locations.length === 1 ? '' : 's') + '</span>' +
       seoRankPill(best) +
+      sourceHtml +
       '<button class="seo-kw-del" title="Delete keyword"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>';
     head.querySelector('.seo-kw-check').addEventListener('click', e => e.stopPropagation());
     head.querySelector('.seo-kw-check').addEventListener('change', e => {
@@ -5825,7 +5860,7 @@ function renderSeoKeywords(){
       renderSeoBulkBar(c);
     });
     head.addEventListener('click', e => {
-      if (e.target.closest('.seo-kw-del') || e.target.closest('.seo-kw-check')) return;
+      if (e.target.closest('.seo-kw-del') || e.target.closest('.seo-kw-check') || e.target.closest('.seo-kw-source')) return;
       k._open = !k._open; renderSeoKeywords();
     });
     head.querySelector('.seo-kw-del').addEventListener('click', e => {
@@ -5885,26 +5920,59 @@ $('seoApplyLocBtn').addEventListener('click', () => {
   const c = activeSeoClient(); if (!c) return;
   if (!seoSelectedKwIds.size) return;
   $('seoApplyLocCount').textContent = 'Applies to ' + seoSelectedKwIds.size + ' selected keyword' + (seoSelectedKwIds.size === 1 ? '' : 's') + '.';
-  $('seoApplyLocInput').value = ''; 
+  $('seoApplyLocInput').value = '';
+  $('seoApplyLocLat').value = ''; $('seoApplyLocLng').value = '';
+  setStatus($('seoApplyLocStatus'), '', '');
   $('seoApplyLocBackdrop').classList.add('on');
   setTimeout(() => $('seoApplyLocInput').focus(), 40);
 });
 $('seoApplyLocCancel').addEventListener('click', () => $('seoApplyLocBackdrop').classList.remove('on'));
 $('seoApplyLocBackdrop').addEventListener('click', e => { if (e.target === $('seoApplyLocBackdrop')) $('seoApplyLocBackdrop').classList.remove('on'); });
+$('seoApplyLocInput').addEventListener('input', () => {
+  if ($('seoApplyLocLat').value || $('seoApplyLocLng').value){
+    $('seoApplyLocLat').value = ''; $('seoApplyLocLng').value = '';
+    setStatus($('seoApplyLocStatus'), 'Location changed \u2014 click Find again to re-pin it.', '');
+  }
+});
+$('seoApplyLocFindBtn').addEventListener('click', async () => {
+  const q = $('seoApplyLocInput').value.trim();
+  if (!q){ setStatus($('seoApplyLocStatus'), 'Type an address or place name first.', 'err'); return; }
+  $('seoApplyLocFindBtn').disabled = true;
+  setStatus($('seoApplyLocStatus'), 'Looking up ' + q + '\u2026', 'busy');
+  try{
+    // Same lookup the GBP grid's Area-to-test step and the per-keyword Find
+    // button use, so the pin lands in exactly the same place either way.
+    const hit = await nominatim(q);
+    if (!hit){ setStatus($('seoApplyLocStatus'), 'No match. Add the city or province and try again.', 'err'); return; }
+    $('seoApplyLocLat').value = parseFloat(parseFloat(hit.lat).toFixed(7));
+    $('seoApplyLocLng').value = parseFloat(parseFloat(hit.lon).toFixed(7));
+    setStatus($('seoApplyLocStatus'), hit.display_name, 'ok');
+  }catch(err){
+    setStatus($('seoApplyLocStatus'), 'Lookup failed: ' + ((err && err.message) || err), 'err');
+  }finally{
+    $('seoApplyLocFindBtn').disabled = false;
+  }
+});
 $('seoApplyLocOk').addEventListener('click', async () => {
   ensureSeoState();
   const c = activeSeoClient(); if (!c) return;
   const label = $('seoApplyLocInput').value.trim();
   const regionIdx = +$('seoApplyLocRegion').value || 0;
+  const latVal = parseFloat($('seoApplyLocLat').value);
+  const lngVal = parseFloat($('seoApplyLocLng').value);
+  const pinnedLat = isNaN(latVal) ? null : latVal;
+  const pinnedLng = isNaN(lngVal) ? null : lngVal;
   if (!label){ toast('Type a location first', 'err'); return; }
   const pairs = [];
   c.keywords.forEach(k => {
     if (!seoSelectedKwIds.has(k.id)) return;
     if (k.locations.some(l => l.label.toLowerCase() === label.toLowerCase())) return;
     const loc = blankSeoLocation(label, regionIdx);
+    if (pinnedLat != null && pinnedLng != null){ loc.lat = pinnedLat; loc.lng = pinnedLng; }
     k.locations.push(loc);
     pairs.push({k, loc});
   });
+  if (pinnedLat != null && pinnedLng != null) c.locationCache[label.toLowerCase()] = {lat: pinnedLat, lng: pinnedLng};
   $('seoApplyLocBackdrop').classList.remove('on');
   save(); renderSeoKeywords();
   if (!pairs.length){ toast('Every selected keyword already had that location', 'ok'); return; }
