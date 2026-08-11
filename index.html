@@ -666,6 +666,31 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .mod-btn:hover{color:var(--console-ink); border-color:#465162;}
 .mod-btn.on{background:var(--brand); border-color:var(--brand); color:#fff;}
 
+.seo-profile-head{display:flex; align-items:center; gap:16px; padding:20px 22px; background:var(--card); border:1px solid var(--line); border-radius:var(--r-xl); box-shadow:var(--sh-1); margin-bottom:18px;}
+.seo-avatar{width:52px; height:52px; border-radius:16px; flex:none; display:grid; place-items:center; font-family:var(--display); font-size:19px; font-weight:600; color:#fff; background:linear-gradient(135deg,var(--brand-hi),var(--brand-deep));}
+.seo-profile-info{flex:1; min-width:0;}
+.seo-profile-name{font-family:var(--display); font-size:19px; font-weight:600; color:var(--ink); letter-spacing:-.015em; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.seo-profile-status{font-size:10px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; padding:3px 10px; border-radius:20px;}
+.seo-profile-status.s-active{background:var(--good-wash); color:var(--good);}
+.seo-profile-status.s-paused{background:var(--line-2); color:var(--ink-2);}
+.seo-profile-status.s-onboarding{background:var(--brand-wash); color:var(--brand-deep);}
+.seo-profile-status.s-at-risk{background:#fbe6df; color:var(--alert);}
+.seo-profile-status.s-cancelled{background:var(--line-2); color:var(--ink-3);}
+.seo-profile-meta{font-size:12px; color:var(--ink-3); margin-top:5px; display:flex; gap:14px; flex-wrap:wrap;}
+.seo-profile-meta a{color:var(--ink-2);}
+
+.seo-autoscan-card{padding:20px 22px;}
+.seo-autoscan-toggle{align-items:flex-start; gap:12px;}
+.seo-autoscan-toggle span{line-height:1.6;}
+.seo-autoscan-toggle b{color:var(--ink);}
+#seoAutoScanBody{margin-top:16px; padding-top:16px; border-top:1px solid var(--line-2);}
+.seo-weekday-chips{display:flex; gap:6px; flex-wrap:wrap;}
+.seo-weekday-chip{border:1px solid var(--line); background:var(--card-2); border-radius:8px; padding:8px 13px; font-size:12px; font-weight:600; color:var(--ink-2); cursor:pointer; transition:all .12s var(--ease);}
+.seo-weekday-chip:hover{border-color:var(--brand); color:var(--brand-deep);}
+.seo-weekday-chip.on{background:var(--brand); border-color:var(--brand); color:#fff;}
+.seo-autoscan-status{font-size:11.5px; color:var(--ink-2); margin-top:14px; padding-top:14px; border-top:1px dashed var(--line-2); line-height:1.8;}
+.seo-autoscan-status b{color:var(--ink);}
+
 .seo-section-h{margin:26px 0 12px;}
 .seo-section-h:first-child{margin-top:0;}
 
@@ -1560,7 +1585,47 @@ body.embed-mode #mapCard{box-shadow:none;}
         </div>
 
         <div id="seoDashboardView" style="display:none">
+          <div class="seo-profile-head" id="seoProfileHead"></div>
           <div class="seo-stats-grid" id="seoStatsGrid"></div>
+
+          <div class="section-h seo-section-h"><h2>Automatic scans</h2><div class="rule"></div></div>
+          <div class="card seo-autoscan-card">
+            <label class="sw seo-autoscan-toggle"><input type="checkbox" id="seoAutoEnabled"/><i></i><span><b>Run scans automatically</b> — only keywords that already have a location assigned are scanned.</span></label>
+            <div id="seoAutoScanBody" style="display:none">
+              <div class="g2">
+                <div class="f">
+                  <label for="seoAutoFrequency">Frequency</label>
+                  <select id="seoAutoFrequency">
+                    <option value="daily">Every day</option>
+                    <option value="weekly">Specific days each week</option>
+                    <option value="monthly">Once a month</option>
+                  </select>
+                </div>
+                <div class="f">
+                  <label for="seoAutoTime">Time of day <span class="opt">your browser's local time</span></label>
+                  <input id="seoAutoTime" type="time" value="09:00"/>
+                </div>
+              </div>
+              <div class="f" id="seoAutoWeekdaysWrap">
+                <label>Days of the week <span class="opt">pick as many as you want — that sets how many times a week it runs</span></label>
+                <div class="seo-weekday-chips" id="seoAutoWeekdays">
+                  <button type="button" class="seo-weekday-chip" data-day="1">Mon</button>
+                  <button type="button" class="seo-weekday-chip" data-day="2">Tue</button>
+                  <button type="button" class="seo-weekday-chip" data-day="3">Wed</button>
+                  <button type="button" class="seo-weekday-chip" data-day="4">Thu</button>
+                  <button type="button" class="seo-weekday-chip" data-day="5">Fri</button>
+                  <button type="button" class="seo-weekday-chip" data-day="6">Sat</button>
+                  <button type="button" class="seo-weekday-chip" data-day="0">Sun</button>
+                </div>
+              </div>
+              <div class="f" id="seoAutoMonthlyWrap" style="display:none">
+                <label for="seoAutoDayOfMonth">Day of the month</label>
+                <input id="seoAutoDayOfMonth" type="text" inputmode="numeric" placeholder="1–28" style="max-width:110px"/>
+              </div>
+              <div class="seo-autoscan-status" id="seoAutoStatusLine"></div>
+            </div>
+            <div class="hint" style="margin-top:12px">This schedule only fires while GBP Reporter is open in a browser tab somewhere. It checks once a minute and catches up on the next visit if a run was missed.</div>
+          </div>
 
           <div class="section-h seo-section-h"><h2>Client basics</h2><div class="rule"></div></div>
           <div class="card">
@@ -5388,11 +5453,14 @@ if (EMBED_ID){
 (function(){
 
 /* ---------- data model ---------- */
+function blankAutoScan(){
+  return { enabled:false, frequency:'weekly', days:[1], dayOfMonth:1, time:'09:00', lastRun:null };
+}
 function blankSeoClient(name){
   return {
     id: uid(), name: name || 'New client', projectLead:'', cms:'', status:'Active',
     allocatedHours:'', monthlyProgress:'', lastMonthlyCall:'', website:'', basecampLink:'',
-    reportLink:'', notes:'', activeKeywordId:null, locationCache:{}, keywords:[]
+    reportLink:'', notes:'', activeKeywordId:null, locationCache:{}, keywords:[], autoScan: blankAutoScan()
   };
 }
 function blankSeoLocation(label, regionIdx){
@@ -5418,6 +5486,12 @@ function migrateSeoClient(c){
   ['projectLead','cms','allocatedHours','monthlyProgress','lastMonthlyCall','website','basecampLink','reportLink','notes'].forEach(k => {
     if (typeof c[k] !== 'string') c[k] = c[k] || '';
   });
+  if (!c.autoScan || typeof c.autoScan !== 'object') c.autoScan = blankAutoScan();
+  else {
+    const d = blankAutoScan();
+    Object.keys(d).forEach(k => { if (c.autoScan[k] === undefined) c.autoScan[k] = d[k]; });
+    if (!Array.isArray(c.autoScan.days)) c.autoScan.days = [1];
+  }
   if (!c.status) c.status = 'Active';
   return c;
 }
@@ -5634,14 +5708,171 @@ $('seoEmptyAddBtn').addEventListener('click', seoAddClient);
 $('seoClientSearch').addEventListener('input', renderSeoTree);
 
 /* ---------- dashboard ---------- */
+function seoInitials(name){
+  const words = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+function renderSeoProfileHead(c){
+  const el = $('seoProfileHead');
+  const meta = [];
+  if (c.website) meta.push('<a href="https://' + esc(c.website.replace(/^https?:\/\//, '')) + '" target="_blank" rel="noopener">' + esc(c.website) + '</a>');
+  if (c.projectLead) meta.push('Lead: ' + esc(c.projectLead));
+  if (c.cms) meta.push(esc(c.cms));
+  el.innerHTML =
+    '<div class="seo-avatar">' + esc(seoInitials(c.name)) + '</div>' +
+    '<div class="seo-profile-info">' +
+      '<div class="seo-profile-name">' + esc(c.name || 'Untitled') +
+        '<span class="seo-profile-status ' + seoStatusDotClass(c.status) + '">' + esc(c.status || 'Active') + '</span>' +
+      '</div>' +
+      (meta.length ? '<div class="seo-profile-meta">' + meta.join('<span>\u00b7</span>') + '</div>' : '') +
+    '</div>';
+}
+
 function renderSeoCrumbs(){
   const c = activeSeoClient();
   $('seoCrumbs').innerHTML = c
     ? '<span class="c-main">' + esc(c.name || 'Untitled') + '</span><span class="c-sep">\u203a</span><span class="c-tag">' + esc(c.status || 'Active') + '</span>'
     : '<span class="c-main">No client selected</span>';
 }
+
+/* ---------- automatic scans: panel + best-effort in-tab scheduler ----------
+   This only fires while GBP Reporter is open in some browser tab (there's
+   no server behind this app to run it unattended). It's still useful on
+   its own for anyone who keeps the tool open in the background, and the
+   same autoScan settings saved here are exactly what a scheduled job
+   (e.g. GitHub Actions) would read to run things for real when nobody has
+   the tab open at all. ---------- */
+function seoLoadAutoScan(c){
+  const a = c.autoScan;
+  $('seoAutoEnabled').checked = !!a.enabled;
+  $('seoAutoScanBody').style.display = a.enabled ? 'block' : 'none';
+  $('seoAutoFrequency').value = a.frequency || 'weekly';
+  $('seoAutoTime').value = a.time || '09:00';
+  $('seoAutoDayOfMonth').value = a.dayOfMonth || 1;
+  document.querySelectorAll('#seoAutoWeekdays .seo-weekday-chip').forEach(btn => {
+    btn.classList.toggle('on', (a.days || []).includes(+btn.dataset.day));
+  });
+  $('seoAutoWeekdaysWrap').style.display = a.frequency === 'weekly' ? '' : 'none';
+  $('seoAutoMonthlyWrap').style.display = a.frequency === 'monthly' ? '' : 'none';
+  seoRenderAutoScanStatus(c);
+}
+function seoNextRunEstimate(c){
+  const a = c.autoScan;
+  if (!a.enabled) return null;
+  const [hh, mm] = (a.time || '09:00').split(':').map(Number);
+  const now = new Date();
+  if (a.frequency === 'daily'){
+    let d = new Date(now); d.setHours(hh, mm, 0, 0);
+    if (d <= now) d.setDate(d.getDate() + 1);
+    return d;
+  }
+  if (a.frequency === 'weekly'){
+    const days = (a.days && a.days.length) ? a.days.slice().sort((x, y) => x - y) : [1];
+    for (let i = 0; i < 8; i++){
+      const cand = new Date(now); cand.setDate(now.getDate() + i); cand.setHours(hh, mm, 0, 0);
+      if (days.includes(cand.getDay()) && cand > now) return cand;
+    }
+    return null;
+  }
+  if (a.frequency === 'monthly'){
+    const dom = Math.min(Math.max(a.dayOfMonth || 1, 1), 28);
+    let cand = new Date(now.getFullYear(), now.getMonth(), dom, hh, mm, 0, 0);
+    if (cand <= now) cand = new Date(now.getFullYear(), now.getMonth() + 1, dom, hh, mm, 0, 0);
+    return cand;
+  }
+  return null;
+}
+function seoRenderAutoScanStatus(c){
+  const el = $('seoAutoStatusLine');
+  const a = c.autoScan;
+  if (!a.enabled){ el.textContent = ''; return; }
+  const parts = [];
+  const next = seoNextRunEstimate(c);
+  if (next) parts.push('<b>Next run:</b> ' + esc(next.toLocaleString([], {weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})));
+  parts.push('<b>Last run:</b> ' + (a.lastRun ? esc(fmtWhen(a.lastRun)) : 'never yet'));
+  el.innerHTML = parts.join(' &nbsp;\u00b7&nbsp; ');
+}
+$('seoAutoEnabled').addEventListener('change', () => {
+  const c = activeSeoClient(); if (!c) return;
+  c.autoScan.enabled = $('seoAutoEnabled').checked;
+  save(); seoLoadAutoScan(c);
+});
+$('seoAutoFrequency').addEventListener('change', () => {
+  const c = activeSeoClient(); if (!c) return;
+  c.autoScan.frequency = $('seoAutoFrequency').value;
+  save(); seoLoadAutoScan(c);
+});
+$('seoAutoTime').addEventListener('change', () => {
+  const c = activeSeoClient(); if (!c) return;
+  c.autoScan.time = $('seoAutoTime').value || '09:00';
+  save(); seoRenderAutoScanStatus(c);
+});
+$('seoAutoDayOfMonth').addEventListener('change', () => {
+  const c = activeSeoClient(); if (!c) return;
+  let n = parseInt($('seoAutoDayOfMonth').value, 10);
+  if (isNaN(n) || n < 1) n = 1; if (n > 28) n = 28;
+  c.autoScan.dayOfMonth = n; $('seoAutoDayOfMonth').value = n;
+  save(); seoRenderAutoScanStatus(c);
+});
+$('seoAutoWeekdays').addEventListener('click', e => {
+  const btn = e.target.closest('.seo-weekday-chip'); if (!btn) return;
+  const c = activeSeoClient(); if (!c) return;
+  const day = +btn.dataset.day;
+  const days = new Set(c.autoScan.days || []);
+  if (days.has(day) && days.size > 1) days.delete(day); else days.add(day);
+  c.autoScan.days = Array.from(days).sort((x, y) => x - y);
+  save(); seoLoadAutoScan(c);
+});
+
+function seoAutoScanEligiblePairs(c){
+  const pairs = [];
+  c.keywords.forEach(k => k.locations.forEach(loc => { if (loc.label && loc.label.trim()) pairs.push({k, loc}); }));
+  return pairs;
+}
+function seoScheduleDue(c, now){
+  const a = c.autoScan;
+  if (!a || !a.enabled) return false;
+  const [hh, mm] = (a.time || '09:00').split(':').map(Number);
+  const target = new Date(now); target.setHours(hh, mm, 0, 0);
+  const withinWindow = now >= target && (now - target) < 10 * 60 * 1000; // 10-minute firing window per check tick
+  if (!withinWindow) return false;
+  if (a.frequency === 'weekly' && !(a.days || []).includes(now.getDay())) return false;
+  if (a.frequency === 'monthly' && now.getDate() !== Math.min(Math.max(a.dayOfMonth || 1, 1), 28)) return false;
+  if (a.lastRun && new Date(a.lastRun).toDateString() === now.toDateString()) return false; // already ran today
+  return true;
+}
+async function seoAutoScanClient(c){
+  const pairs = seoAutoScanEligiblePairs(c);
+  if (!pairs.length || !c.website || !c.website.trim() || !providerReady()) return 0;
+  await runPool(pairs.length, state.settings.concurrency || 6, () => false, async (i) => {
+    await seoScanOne(c, pairs[i].k, pairs[i].loc);
+  });
+  save();
+  const active = activeSeoClient();
+  if (active && active.id === c.id){ renderSeoKeywords(); renderSeoStats(c); }
+  return pairs.length;
+}
+async function seoRunDueSchedules(){
+  ensureSeoState();
+  const now = new Date();
+  for (const c of state.seoClients.slice()){
+    if (!seoScheduleDue(c, now)) continue;
+    c.autoScan.lastRun = Date.now();
+    save();
+    const n = await seoAutoScanClient(c);
+    if (n) toast('Auto-scanned ' + c.name + ' \u2014 ' + n + ' location' + (n === 1 ? '' : 's') + ' checked');
+    const active = activeSeoClient();
+    if (active && active.id === c.id) seoRenderAutoScanStatus(c);
+  }
+}
+setInterval(seoRunDueSchedules, 60 * 1000);
+setTimeout(seoRunDueSchedules, 10000);
+
 function seoLoadDashboard(){
   const c = activeSeoClient(); if (!c) return;
+  renderSeoProfileHead(c);
   $('seoName').value = c.name || '';
   $('seoStatus').value = c.status || 'Active';
   $('seoLead').value = c.projectLead || '';
@@ -5653,6 +5884,7 @@ function seoLoadDashboard(){
   $('seoBasecamp').value = c.basecampLink || '';
   $('seoReportLink').value = c.reportLink || '';
   $('seoNotes').value = c.notes || '';
+  seoLoadAutoScan(c);
 }
 const SEO_FIELD_MAP = [
   ['seoName','name','input'], ['seoStatus','status','change'], ['seoLead','projectLead','input'],
@@ -5666,6 +5898,7 @@ SEO_FIELD_MAP.forEach(([id, key, evt]) => {
     c[key] = $(id).value;
     if (key === 'name'){ renderSeoTree(); renderSeoCrumbs(); }
     if (key === 'status') renderSeoCrumbs();
+    if (['name','status','website','projectLead','cms'].includes(key)) renderSeoProfileHead(c);
     save();
   });
 });
