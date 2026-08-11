@@ -6529,8 +6529,16 @@ function seoSetModule(m){
     if (window.EDGE_LOGO){ const l = $('seoBrandLogo'); if (l) l.src = window.EDGE_LOGO; }
     if (state.seoClients.length && !activeSeoClient()) state.activeSeoClientId = state.seoClients[0].id;
     renderSeoAll();
-  } else if (typeof map !== 'undefined' && map){
-    setTimeout(() => { try{ map.invalidateSize(); cmpMap.invalidateSize(); }catch(e){} }, 60);
+  } else {
+    // Fully re-render the GBP view every time we switch back to it. A
+    // Leaflet map that's been sitting inside a display:none container can
+    // stay visually stale/blank even after invalidateSize() alone — this
+    // makes it look like data is missing when it never left state.clients.
+    // renderAll() only redraws from current state; it never touches data.
+    seoOrigRenderAll();
+    if (typeof map !== 'undefined' && map){
+      setTimeout(() => { try{ map.invalidateSize(); cmpMap.invalidateSize(); }catch(e){} }, 60);
+    }
   }
 }
 $('modBtnGbp').addEventListener('click', () => seoSetModule('gbp'));
