@@ -1516,7 +1516,9 @@ body.embed-mode #mapCard{box-shadow:none;}
     <div class="rail-foot">
       <div class="sync" id="seoSyncPill"><i></i><span>Saved with GBP Reporter data</span></div>
       <div class="mini-row">
+        <button class="mini-btn" id="seoImportBtn">Import clients</button>
         <button class="mini-btn" id="seoExportAllBtn">Export all (.xlsx)</button>
+        <input id="seoImportFile" type="file" accept="application/json" style="display:none"/>
       </div>
     </div>
   </aside>
@@ -5921,6 +5923,65 @@ $('seoExportClientBtn').addEventListener('click', () => {
 $('seoExportAllBtn').addEventListener('click', () => {
   if (!state.seoClients.length){ toast('No SEO clients yet', 'err'); return; }
   seoExportXlsx(state.seoClients, 'seo_clients_rankings.xlsx');
+});
+
+/* ---------- import clients from a .json list ----------
+   Expects an array of objects: {name, projectLead, cms, allocatedHours,
+   monthlyProgress, status, notes, basecampLink, website, reportLink,
+   lastMonthlyCall, keywords:[string,...]}. Existing clients are matched
+   by name (case-insensitive): blank fields get filled in, populated ones
+   are left alone, and keyword lists are merged rather than replaced, so
+   re-importing or importing after manual edits never loses anything. */
+$('seoImportBtn').addEventListener('click', () => $('seoImportFile').click());
+$('seoImportFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    ensureSeoState();
+    try{
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) throw new Error('expected a JSON array of clients');
+      let added = 0, updated = 0, newKeywords = 0;
+      data.forEach(rec => {
+        const name = (rec.name || '').trim();
+        if (!name) return;
+        let c = state.seoClients.find(x => (x.name || '').trim().toLowerCase() === name.toLowerCase());
+        if (!c){
+          c = blankSeoClient(name);
+          state.seoClients.push(c);
+          added++;
+        } else {
+          updated++;
+        }
+        const fillIfBlank = (key, val) => { if (val && !(c[key] || '').toString().trim()) c[key] = val; };
+        fillIfBlank('projectLead', rec.projectLead);
+        fillIfBlank('cms', rec.cms);
+        fillIfBlank('allocatedHours', rec.allocatedHours);
+        fillIfBlank('monthlyProgress', rec.monthlyProgress);
+        fillIfBlank('notes', rec.notes);
+        fillIfBlank('basecampLink', rec.basecampLink);
+        fillIfBlank('website', rec.website);
+        fillIfBlank('reportLink', rec.reportLink);
+        fillIfBlank('lastMonthlyCall', rec.lastMonthlyCall);
+        if (rec.status && !c.status) c.status = rec.status;
+        (rec.keywords || []).forEach(text => {
+          const t = (text || '').trim();
+          if (!t) return;
+          if (!c.keywords.some(k => k.text.toLowerCase() === t.toLowerCase())){
+            c.keywords.push({id: uid(), text: t, locations: []});
+            newKeywords++;
+          }
+        });
+      });
+      save(); renderSeoTree(); renderSeoAll();
+      toast('Imported: ' + added + ' new client' + (added === 1 ? '' : 's') + ', ' + updated + ' updated, ' + newKeywords + ' new keyword' + (newKeywords === 1 ? '' : 's'));
+    }catch(err){
+      toast('Import failed: ' + err.message, 'err');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
 });
 
 /* ---------- dashboard / keywords tab switch ---------- */
