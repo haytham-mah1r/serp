@@ -666,50 +666,95 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .mod-btn:hover{color:var(--console-ink); border-color:#465162;}
 .mod-btn.on{background:var(--brand); border-color:var(--brand); color:#fff;}
 
-.seo-kw-toolbar{display:flex; flex-direction:column; gap:12px;}
-.seo-kw-add{display:grid; grid-template-columns:1.4fr 1fr .9fr auto; gap:8px;}
-.seo-kw-add input, .seo-kw-add select{padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--line); font-family:var(--ui); font-size:13px; background:var(--card-2);}
-.seo-kw-actions{display:flex; gap:8px; flex-wrap:wrap;}
-.seo-scan-progress{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--ink-2);}
-.seo-scan-bar{flex:1; height:6px; border-radius:4px; background:var(--line); overflow:hidden;}
+.seo-section-h{margin:26px 0 12px;}
+.seo-section-h:first-child{margin-top:0;}
+
+.seo-stats-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:22px;}
+.seo-stat{background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg); padding:16px 18px; box-shadow:var(--sh-1);}
+.seo-stat-label{font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); font-weight:700; margin-bottom:7px;}
+.seo-stat-value{font-family:var(--display); font-size:21px; font-weight:600; color:var(--ink); letter-spacing:-.01em;}
+.seo-stat-value.good{color:var(--good);}
+.seo-stat-value.bad{color:var(--lost);}
+.seo-stat-sub{font-size:11px; color:var(--ink-3); margin-top:3px;}
+
+.seo-status-dot{width:7px; height:7px; border-radius:50%; flex:none; display:inline-block;}
+.seo-status-dot.s-active{background:var(--good);}
+.seo-status-dot.s-paused{background:var(--ink-3);}
+.seo-status-dot.s-onboarding{background:var(--brand);}
+.seo-status-dot.s-at-risk{background:var(--alert);}
+.seo-status-dot.s-cancelled{background:#c7cdd3;}
+.seo-tree-rank{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); flex:none;}
+
+.seo-kw-toolbar{display:flex; flex-direction:column; gap:14px;}
+.seo-kw-add{display:grid; grid-template-columns:1.3fr 1.1fr .8fr auto; gap:10px; align-items:end;}
+.seo-kw-add .f{margin:0;}
+.seo-kw-add label{font-size:10.5px;}
+.seo-kw-add input, .seo-kw-add select{padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--line); font-family:var(--ui); font-size:13px; background:var(--card-2); width:100%; height:38px;}
+.seo-kw-add > button{height:38px;}
+.seo-kw-actions{display:flex; gap:8px; flex-wrap:wrap; padding-top:2px; border-top:1px solid var(--line-2); padding-top:14px;}
+.seo-kw-actions .btn-go{margin-right:auto;}
+.seo-scan-progress{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--ink-2); background:var(--brand-wash); border-radius:var(--r-sm); padding:9px 12px;}
+.seo-scan-bar{flex:1; height:6px; border-radius:4px; background:#f3d9bf; overflow:hidden;}
 .seo-scan-bar i{display:block; height:100%; width:0%; background:var(--brand); transition:width .2s var(--ease);}
 
-.seo-kw-empty{padding:32px; text-align:center; color:var(--ink-3); font-size:13px;}
-.seo-kw-row{border-bottom:1px solid var(--line-2);}
+.seo-kw-empty{padding:44px 24px; text-align:center; color:var(--ink-3); font-size:13px; line-height:1.7;}
+.seo-kw-row{border-bottom:1px solid var(--line-2); transition:background .12s var(--ease);}
 .seo-kw-row:last-child{border-bottom:none;}
-.seo-kw-head{display:flex; align-items:center; gap:10px; padding:13px 16px; cursor:pointer;}
+.seo-kw-head{display:flex; align-items:center; gap:11px; padding:15px 18px; cursor:pointer;}
 .seo-kw-head:hover{background:var(--card-2);}
-.seo-kw-caret{width:9px; height:9px; border-right:2px solid var(--ink-3); border-bottom:2px solid var(--ink-3); transform:rotate(-45deg); transition:transform .15s var(--ease); flex:none;}
+.seo-kw-caret{width:8px; height:8px; border-right:2px solid var(--ink-3); border-bottom:2px solid var(--ink-3); transform:rotate(-45deg); transition:transform .15s var(--ease); flex:none;}
 .seo-kw-row.open .seo-kw-caret{transform:rotate(45deg);}
-.seo-kw-text{flex:1; font-weight:600; font-size:13.5px; color:var(--ink);}
-.seo-kw-best{font-family:var(--mono); font-size:11.5px;}
-.seo-kw-locs-count{font-size:11px; color:var(--ink-3); background:var(--card-2); border:1px solid var(--line); border-radius:20px; padding:2px 9px;}
-.seo-kw-del{border:none; background:none; color:var(--ink-3); cursor:pointer; font-size:16px; line-height:1; padding:2px 6px; border-radius:6px;}
-.seo-kw-del:hover{color:var(--alert); background:var(--good-wash);}
-.seo-kw-body{display:none; padding:0 16px 14px 35px;}
+.seo-kw-row.open{background:var(--card-2);}
+.seo-kw-text{flex:1; font-weight:600; font-size:14px; color:var(--ink); letter-spacing:-.005em;}
+.seo-kw-locs-count{font-size:10.5px; color:var(--ink-3); background:var(--card); border:1px solid var(--line); border-radius:20px; padding:3px 10px; flex:none;}
+.seo-kw-del{border:none; background:none; color:var(--ink-3); cursor:pointer; padding:6px; border-radius:7px; display:inline-flex; flex:none; transition:all .12s var(--ease);}
+.seo-kw-del svg{width:14px; height:14px; stroke:currentColor;}
+.seo-kw-del:hover{color:var(--alert); background:#fbe6df;}
+.seo-kw-body{display:none; padding:2px 18px 16px 39px;}
 .seo-kw-row.open .seo-kw-body{display:block;}
-.seo-loc-row{display:flex; flex-direction:column; gap:6px; padding:10px 0; border-top:1px dashed var(--line-2);}
-.seo-loc-row:first-child{border-top:none;}
-.seo-loc-top{display:grid; grid-template-columns:1.3fr auto .95fr auto auto auto auto; gap:8px; align-items:center;}
-.seo-loc-bottom{display:grid; grid-template-columns:96px 96px 1fr 74px; gap:8px; align-items:center;}
-.seo-loc-top input[type=text], .seo-loc-top select, .seo-loc-bottom input[type=text]{padding:7px 9px; border-radius:7px; border:1px solid var(--line); font-family:var(--ui); font-size:12.5px; background:var(--card-2); width:100%;}
-.seo-loc-bottom input[type=text]{font-family:var(--mono); font-size:11px;}
-.seo-loc-rank{font-family:var(--mono); font-weight:700; font-size:13px; text-align:center; min-width:34px;}
-.seo-loc-delta{font-family:var(--mono); font-size:11px; text-align:center;}
-.seo-loc-delta.up{color:var(--good);}
-.seo-loc-delta.down{color:var(--bad);}
-.seo-loc-status{margin:0; min-height:auto; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-.seo-loc-status a{color:var(--ink-2);}
-.seo-loc-btns{display:flex; gap:4px;}
-.seo-loc-add-btn{border:1px dashed var(--line); background:none; border-radius:8px; color:var(--ink-2); font-size:12px; padding:7px 10px; cursor:pointer; margin-top:8px;}
-.seo-loc-add-btn:hover{border-color:var(--brand); color:var(--brand-deep);}
-.seo-manual-tag{font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--brand-deep); background:var(--brand-wash); border-radius:5px; padding:1px 5px; margin-left:4px;}
+
+.seo-loc-row{padding:12px 0; border-top:1px solid var(--line-2); display:flex; flex-direction:column; gap:7px;}
+.seo-loc-row:first-child{border-top:none; padding-top:6px;}
+.seo-loc-top{display:grid; grid-template-columns:1.3fr .85fr auto auto auto auto; gap:9px; align-items:center;}
+.seo-loc-top input[type=text], .seo-loc-top select{padding:8px 10px; border-radius:8px; border:1px solid var(--line); font-family:var(--ui); font-size:12.5px; background:var(--card-2); width:100%;}
+.seo-loc-top input[type=text]:focus, .seo-loc-top select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(232,119,34,.12);}
+.seo-loc-delta{font-family:var(--mono); font-size:11px; text-align:center; color:var(--ink-3);}
+.seo-loc-delta.up{color:var(--good); font-weight:700;}
+.seo-loc-delta.down{color:var(--bad); font-weight:700;}
+.seo-loc-scan-btn{display:inline-flex; align-items:center; gap:5px; white-space:nowrap;}
+.seo-loc-scan-btn svg{width:11px; height:11px; stroke:currentColor;}
+.seo-loc-scan-btn.is-loading{opacity:.55; cursor:wait;}
+.seo-loc-del{border:none; background:none; color:var(--ink-3); cursor:pointer; padding:7px; border-radius:8px; display:inline-flex; transition:all .12s var(--ease);}
+.seo-loc-del svg{width:13px; height:13px; stroke:currentColor;}
+.seo-loc-del:hover{color:var(--alert); background:#fbe6df;}
+.seo-manual-tag{font-size:9px; text-transform:uppercase; letter-spacing:.04em; color:var(--brand-deep); background:var(--brand-wash); border-radius:5px; padding:2px 6px; margin-left:5px; font-weight:700;}
+
+.seo-loc-status{margin:0; min-height:auto; font-size:11px; padding-left:1px;}
+.seo-loc-status a{color:var(--ink-2); text-decoration:underline; text-decoration-color:var(--line);}
+.seo-loc-status a:hover{color:var(--brand-deep); text-decoration-color:var(--brand);}
+
+.seo-loc-adv{font-size:11px;}
+.seo-loc-adv summary{cursor:pointer; list-style:none; color:var(--ink-3); font-weight:600; display:inline-flex; align-items:center; gap:4px; user-select:none;}
+.seo-loc-adv summary::-webkit-details-marker{display:none;}
+.seo-loc-adv summary:hover{color:var(--brand-deep);}
+.seo-loc-adv summary::before{content:'\25b8'; font-size:9px; transition:transform .15s var(--ease);}
+.seo-loc-adv[open] summary::before{transform:rotate(90deg);}
+.seo-loc-adv-body{margin-top:9px; padding:12px; background:var(--card-2); border:1px solid var(--line-2); border-radius:10px; display:flex; flex-direction:column; gap:9px;}
+.seo-loc-adv-coords{display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:center;}
+.seo-loc-adv-coords input[type=text]{padding:7px 9px; border-radius:7px; border:1px solid var(--line); font-family:var(--mono); font-size:11px; background:var(--card); width:100%;}
+.seo-loc-adv-manual{display:flex; align-items:center; gap:9px; font-size:11.5px; color:var(--ink-2); border-top:1px dashed var(--line); padding-top:9px;}
+.seo-loc-adv-manual input{width:64px; padding:6px 8px; border-radius:7px; border:1px solid var(--line); font-family:var(--mono); font-size:11px; background:var(--card);}
+
+.seo-loc-add-btn{border:1px dashed var(--line); background:none; border-radius:9px; color:var(--ink-2); font-size:12px; padding:9px 12px; cursor:pointer; margin-top:6px; width:100%; text-align:center; transition:all .12s var(--ease);}
+.seo-loc-add-btn:hover{border-color:var(--brand); color:var(--brand-deep); background:var(--brand-wash);}
+
 .modal-wide{max-width:640px;}
 .modal-wide textarea{width:100%; padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--line); font-family:var(--mono); font-size:12.5px; resize:vertical;}
 @media (max-width:900px){
+  .seo-stats-grid{grid-template-columns:1fr 1fr;}
   .seo-kw-add{grid-template-columns:1fr 1fr;}
   .seo-loc-top{grid-template-columns:1fr 1fr; row-gap:6px;}
-  .seo-loc-bottom{grid-template-columns:1fr 1fr; row-gap:6px;}
+  .seo-loc-adv-coords{grid-template-columns:1fr 1fr;}
 }
 .auth-screen{
   position:fixed; inset:0; z-index:9000; display:none; place-items:center;
@@ -1499,8 +1544,10 @@ body.embed-mode #mapCard{box-shadow:none;}
         </div>
 
         <div id="seoDashboardView" style="display:none">
+          <div class="seo-stats-grid" id="seoStatsGrid"></div>
+
+          <div class="section-h seo-section-h"><h2>Client basics</h2><div class="rule"></div></div>
           <div class="card">
-            <div class="eyebrow">Client details</div>
             <div class="g2">
               <div class="f">
                 <label for="seoName">Client name</label>
@@ -1524,6 +1571,10 @@ body.embed-mode #mapCard{box-shadow:none;}
                 <input id="seoCms" type="text" placeholder="WordPress" autocomplete="off"/>
               </div>
             </div>
+          </div>
+
+          <div class="section-h seo-section-h"><h2>Tracking</h2><div class="rule"></div></div>
+          <div class="card">
             <div class="g2">
               <div class="f">
                 <label for="seoWebsite">Website <span class="opt">used to detect this client's rank in results</span></label>
@@ -1544,6 +1595,10 @@ body.embed-mode #mapCard{box-shadow:none;}
                 <input id="seoLastCall" type="date"/>
               </div>
             </div>
+          </div>
+
+          <div class="section-h seo-section-h"><h2>Links &amp; notes</h2><div class="rule"></div></div>
+          <div class="card">
             <div class="g2">
               <div class="f">
                 <label for="seoBasecamp">Basecamp link</label>
@@ -1569,15 +1624,24 @@ body.embed-mode #mapCard{box-shadow:none;}
 
           <div class="card seo-kw-toolbar">
             <div class="seo-kw-add">
-              <input id="seoNewKeyword" type="text" placeholder="Add a keyword…" autocomplete="off"/>
-              <input id="seoNewLocation" type="text" placeholder="Location (city, region)…" autocomplete="off"/>
-              <select id="seoNewRegion"></select>
-              <button class="btn btn-dark" id="seoAddKeywordBtn">Add</button>
+              <div class="f">
+                <label for="seoNewKeyword">Keyword</label>
+                <input id="seoNewKeyword" type="text" placeholder="e.g. concrete contractor red deer" autocomplete="off"/>
+              </div>
+              <div class="f">
+                <label for="seoNewLocation">Starting location <span class="opt">optional</span></label>
+                <input id="seoNewLocation" type="text" placeholder="City, region, or address" autocomplete="off"/>
+              </div>
+              <div class="f">
+                <label for="seoNewRegion">Region</label>
+                <select id="seoNewRegion"></select>
+              </div>
+              <button class="btn btn-dark" id="seoAddKeywordBtn">Add keyword</button>
             </div>
             <div class="seo-kw-actions">
-              <button class="btn" id="seoBulkImportBtn">Bulk import keywords</button>
               <button class="btn btn-go" id="seoScanAllBtn">Scan all keywords</button>
-              <button class="btn" id="seoExportClientBtn">Export client (.xlsx)</button>
+              <button class="btn" id="seoBulkImportBtn">Bulk import…</button>
+              <button class="btn" id="seoExportClientBtn">Export .xlsx</button>
             </div>
             <div class="seo-scan-progress" id="seoScanProgress" style="display:none">
               <div class="seo-scan-bar"><i id="seoScanBarFill"></i></div>
@@ -1589,7 +1653,9 @@ body.embed-mode #mapCard{box-shadow:none;}
 
           <div class="tbl-card">
             <div id="seoKeywordList"></div>
-            <div class="seo-kw-empty" id="seoKeywordEmpty" style="display:none">No keywords yet. Add one above or bulk-import a whole list.</div>
+            <div class="seo-kw-empty" id="seoKeywordEmpty" style="display:none">
+              No keywords yet. Type one above and press <b>Add keyword</b>, or use <b>Bulk import…</b> to drop in a whole list at once.
+            </div>
           </div>
 
         </div>
@@ -5309,6 +5375,20 @@ function seoKeywordBestRank(k){
   k.locations.forEach(l => { if (l.rank != null && l.rank > 0 && (best == null || l.rank < best)) best = l.rank; });
   return best;
 }
+function seoClientBestRank(c){
+  let best = null;
+  c.keywords.forEach(k => { const b = seoKeywordBestRank(k); if (b != null && (best == null || b < best)) best = b; });
+  return best;
+}
+function seoStatusDotClass(status){
+  const s = (status || '').toLowerCase();
+  if (s === 'active') return 's-active';
+  if (s === 'paused') return 's-paused';
+  if (s === 'onboarding') return 's-onboarding';
+  if (s === 'at risk') return 's-at-risk';
+  if (s === 'cancelled') return 's-cancelled';
+  return 's-active';
+}
 
 /* ---------- live search — reuses the exact same engine as the rank grid:
    providerQuery() (DataForSEO / Serper, per the settings on step 4),
@@ -5443,7 +5523,11 @@ function renderSeoTree(){
     const row = document.createElement('div');
     row.className = 'tree-row' + (c.id === state.activeSeoClientId ? ' on' : '');
     const kwCount = c.keywords.length;
-    row.innerHTML = '<span class="tree-name">' + esc(c.name || 'Untitled') + '</span>' +
+    const best = seoClientBestRank(c);
+    const bestHtml = best != null ? '<span class="seo-tree-rank">#' + best + '</span>' : '';
+    row.innerHTML = '<span class="seo-status-dot ' + seoStatusDotClass(c.status) + '" title="' + esc(c.status || 'Active') + '"></span>' +
+      '<span class="tree-name">' + esc(c.name || 'Untitled') + '</span>' +
+      bestHtml +
       '<span class="tree-count">' + kwCount + '</span>' +
       '<button class="tree-kill" title="Delete client">\u00d7</button>';
     row.addEventListener('click', e => {
@@ -5526,7 +5610,8 @@ function seoLocationRow(c, k, loc){
   const row = document.createElement('div');
   row.className = 'seo-loc-row';
 
-  /* ---- top line: what to search & where ---- */
+  /* ---- primary line: the essentials — where, how it's ranking, and the
+     two things you actually do with a location day to day ---- */
   const top = document.createElement('div');
   top.className = 'seo-loc-top';
 
@@ -5534,34 +5619,12 @@ function seoLocationRow(c, k, loc){
   labelInput.type = 'text'; labelInput.placeholder = 'Address, city or place name\u2026'; labelInput.value = loc.label || '';
   labelInput.addEventListener('change', () => {
     const v = labelInput.value.trim();
-    if (v !== loc.label){ loc.lat = null; loc.lng = null; latInput.value = ''; lngInput.value = ''; setStatus(statusEl, 'Location changed \u2014 click Find to re-pin it.', ''); }
-    loc.label = v; save();
-  });
-
-  const findBtn = document.createElement('button');
-  findBtn.type = 'button'; findBtn.className = 'btn btn-sm'; findBtn.textContent = 'Find';
-  findBtn.title = 'Look up exact coordinates for this location';
-  findBtn.addEventListener('click', async () => {
-    const q = labelInput.value.trim();
-    if (!q){ setStatus(statusEl, 'Type an address or place name first.', 'err'); return; }
-    findBtn.disabled = true;
-    setStatus(statusEl, 'Looking up ' + q + '\u2026', 'busy');
-    try{
-      // Same lookup the GBP grid uses for its "Area to test" step: the
-      // place name goes to Nominatim exactly as typed, with no guessed
-      // country/region code tacked on, so it resolves the same way here.
-      const hit = await nominatim(q);
-      if (!hit){ setStatus(statusEl, 'No match. Add the city or province and try again.', 'err'); return; }
-      loc.label = q; loc.lat = parseFloat(parseFloat(hit.lat).toFixed(7)); loc.lng = parseFloat(parseFloat(hit.lon).toFixed(7));
-      latInput.value = loc.lat; lngInput.value = loc.lng;
-      c.locationCache[q.toLowerCase()] = {lat: loc.lat, lng: loc.lng};
-      setStatus(statusEl, hit.display_name, 'ok');
-      save();
-    }catch(err){
-      setStatus(statusEl, 'Lookup failed: ' + ((err && err.message) || err), 'err');
-    }finally{
-      findBtn.disabled = false;
+    if (v !== loc.label){
+      loc.lat = null; loc.lng = null;
+      if (latInput) latInput.value = ''; if (lngInput) lngInput.value = '';
+      setStatus(statusEl, 'Location changed \u2014 it\u2019ll be re-pinned on the next scan.', '');
     }
+    loc.label = v; save();
   });
 
   const regionSel = document.createElement('select');
@@ -5586,57 +5649,93 @@ function seoLocationRow(c, k, loc){
     deltaBox.textContent = '\u2014';
   }
 
-  const btns = document.createElement('div');
-  btns.className = 'seo-loc-btns';
-  const rescanBtn = document.createElement('button');
-  rescanBtn.className = 'btn btn-sm'; rescanBtn.textContent = 'Scan';
-  rescanBtn.addEventListener('click', async () => {
+  const scanBtn = document.createElement('button');
+  scanBtn.type = 'button'; scanBtn.className = 'btn btn-sm seo-loc-scan-btn';
+  scanBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span>Scan</span>';
+  scanBtn.addEventListener('click', async () => {
     if (!loc.label.trim()){ toast('Add a location first', 'err'); return; }
-    rescanBtn.disabled = true; rescanBtn.textContent = '\u2026';
+    scanBtn.disabled = true; scanBtn.classList.add('is-loading');
     await seoScanOne(c, k, loc);
     save(); renderSeoKeywords();
   });
+
   const delBtn = document.createElement('button');
-  delBtn.className = 'btn btn-sm'; delBtn.textContent = '\u00d7'; delBtn.title = 'Remove this location';
+  delBtn.type = 'button'; delBtn.className = 'seo-loc-del'; delBtn.title = 'Remove this location';
+  delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>';
   delBtn.addEventListener('click', () => {
     k.locations = k.locations.filter(l => l.id !== loc.id);
     save(); renderSeoKeywords();
   });
-  btns.appendChild(rescanBtn); btns.appendChild(delBtn);
 
-  [labelInput, findBtn, regionSel, rankBox, deltaBox, btns].forEach(el => top.appendChild(el));
+  [labelInput, regionSel, rankBox, deltaBox, scanBtn, delBtn].forEach(el => top.appendChild(el));
 
-  /* ---- bottom line: the pinned coordinates that actually get searched,
-     visible and editable just like the GBP grid's Latitude/Longitude
-     fields, plus a status line and the manual rank override ---- */
+  /* ---- secondary line: quiet by default. Status text on its own, and
+     an optional "Coordinates & manual override" drawer for the times you
+     need to verify or correct exactly what got searched — most locations
+     never need to be opened, since Scan pins them automatically. ---- */
   const bottom = document.createElement('div');
   bottom.className = 'seo-loc-bottom';
-
-  const latInput = document.createElement('input');
-  latInput.type = 'text'; latInput.inputMode = 'decimal'; latInput.placeholder = 'Latitude';
-  latInput.value = loc.lat != null ? loc.lat : '';
-  latInput.addEventListener('change', () => {
-    const v = parseFloat(latInput.value);
-    loc.lat = isNaN(v) ? null : v; save();
-  });
-
-  const lngInput = document.createElement('input');
-  lngInput.type = 'text'; lngInput.inputMode = 'decimal'; lngInput.placeholder = 'Longitude';
-  lngInput.value = loc.lng != null ? loc.lng : '';
-  lngInput.addEventListener('change', () => {
-    const v = parseFloat(lngInput.value);
-    loc.lng = isNaN(v) ? null : v; save();
-  });
 
   const statusEl = document.createElement('div');
   statusEl.className = 'status seo-loc-status';
   if (loc.error) setStatus(statusEl, loc.error, 'err');
-  else if (loc.sourceUrl) statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) + ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">source</a>';
+  else if (loc.sourceUrl) statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) + ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">view the search</a>';
   else if (loc.lat != null) setStatus(statusEl, 'Pinned \u2014 ready to scan.', 'ok');
-  else setStatus(statusEl, 'Click Find to pin this location precisely, or Scan to pin it automatically.', '');
+  else setStatus(statusEl, 'Not scanned yet \u2014 click Scan and it\u2019ll pin itself automatically.', '');
 
+  const details = document.createElement('details');
+  details.className = 'seo-loc-adv';
+  const summary = document.createElement('summary');
+  summary.textContent = 'Coordinates & manual override';
+  details.appendChild(summary);
+
+  const advBody = document.createElement('div');
+  advBody.className = 'seo-loc-adv-body';
+
+  const coordsRow = document.createElement('div');
+  coordsRow.className = 'seo-loc-adv-coords';
+
+  const latInput = document.createElement('input');
+  latInput.type = 'text'; latInput.inputMode = 'decimal'; latInput.placeholder = 'Latitude';
+  latInput.value = loc.lat != null ? loc.lat : '';
+  latInput.addEventListener('change', () => { const v = parseFloat(latInput.value); loc.lat = isNaN(v) ? null : v; save(); });
+
+  const lngInput = document.createElement('input');
+  lngInput.type = 'text'; lngInput.inputMode = 'decimal'; lngInput.placeholder = 'Longitude';
+  lngInput.value = loc.lng != null ? loc.lng : '';
+  lngInput.addEventListener('change', () => { const v = parseFloat(lngInput.value); loc.lng = isNaN(v) ? null : v; save(); });
+
+  const findBtn = document.createElement('button');
+  findBtn.type = 'button'; findBtn.className = 'btn btn-sm'; findBtn.textContent = 'Find';
+  findBtn.title = 'Look up exact coordinates for this location, same as the GBP grid\u2019s Area-to-test step';
+  findBtn.addEventListener('click', async () => {
+    const q = labelInput.value.trim();
+    if (!q){ setStatus(statusEl, 'Type an address or place name first.', 'err'); return; }
+    findBtn.disabled = true;
+    setStatus(statusEl, 'Looking up ' + q + '\u2026', 'busy');
+    try{
+      const hit = await nominatim(q);
+      if (!hit){ setStatus(statusEl, 'No match. Add the city or province and try again.', 'err'); return; }
+      loc.label = q; loc.lat = parseFloat(parseFloat(hit.lat).toFixed(7)); loc.lng = parseFloat(parseFloat(hit.lon).toFixed(7));
+      latInput.value = loc.lat; lngInput.value = loc.lng;
+      c.locationCache[q.toLowerCase()] = {lat: loc.lat, lng: loc.lng};
+      setStatus(statusEl, hit.display_name, 'ok');
+      save();
+    }catch(err){
+      setStatus(statusEl, 'Lookup failed: ' + ((err && err.message) || err), 'err');
+    }finally{
+      findBtn.disabled = false;
+    }
+  });
+
+  [latInput, lngInput, findBtn].forEach(el => coordsRow.appendChild(el));
+
+  const manualRow = document.createElement('div');
+  manualRow.className = 'seo-loc-adv-manual';
+  const manualLabel = document.createElement('span');
+  manualLabel.textContent = 'Set rank by hand:';
   const rankInput = document.createElement('input');
-  rankInput.type = 'text'; rankInput.inputMode = 'numeric'; rankInput.placeholder = 'set #';
+  rankInput.type = 'text'; rankInput.inputMode = 'numeric'; rankInput.placeholder = '# (0 = not ranking)';
   rankInput.title = 'Type a rank to override manually (0 = not ranking)';
   rankInput.addEventListener('change', () => {
     const v = rankInput.value.trim();
@@ -5648,14 +5747,19 @@ function seoLocationRow(c, k, loc){
     save(); renderSeoKeywords();
     toast('Rank set manually');
   });
+  manualRow.appendChild(manualLabel); manualRow.appendChild(rankInput);
 
-  [latInput, lngInput, statusEl, rankInput].forEach(el => bottom.appendChild(el));
+  advBody.appendChild(coordsRow);
+  advBody.appendChild(manualRow);
+  details.appendChild(advBody);
+
+  bottom.appendChild(statusEl);
+  bottom.appendChild(details);
 
   row.appendChild(top);
   row.appendChild(bottom);
   return row;
 }
-
 function renderSeoKeywords(){
   const c = activeSeoClient(); if (!c) return;
   const wrap = $('seoKeywordList');
@@ -5671,7 +5775,7 @@ function renderSeoKeywords(){
       '<span class="seo-kw-text">' + esc(k.text) + '</span>' +
       '<span class="seo-kw-locs-count">' + k.locations.length + ' loc' + (k.locations.length === 1 ? '' : 's') + '</span>' +
       seoRankPill(best) +
-      '<button class="seo-kw-del" title="Delete keyword">\u00d7</button>';
+      '<button class="seo-kw-del" title="Delete keyword"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg></button>';
     head.addEventListener('click', e => {
       if (e.target.closest('.seo-kw-del')) return;
       k._open = !k._open; renderSeoKeywords();
@@ -5831,6 +5935,28 @@ document.querySelectorAll('#seoStage .mode').forEach(btn => {
 });
 
 /* ---------- top-level render + module switch ---------- */
+function renderSeoStats(c){
+  const grid = $('seoStatsGrid');
+  const kwCount = c.keywords.length;
+  let locCount = 0, scannedCount = 0, lastScan = null, best = null, notRanking = 0;
+  c.keywords.forEach(k => k.locations.forEach(l => {
+    locCount++;
+    if (l.checkedAt){ scannedCount++; if (!lastScan || l.checkedAt > lastScan) lastScan = l.checkedAt; }
+    if (l.rank != null){ if (l.rank === 0) notRanking++; else if (best == null || l.rank < best) best = l.rank; }
+  }));
+  const tiles = [
+    {label:'Keywords tracked', value:kwCount, sub:locCount + ' location' + (locCount === 1 ? '' : 's') + ' total'},
+    {label:'Best rank', value: best != null ? '#' + best : '\u2014', cls: best != null ? (best <= 3 ? 'good' : '') : '', sub: notRanking ? notRanking + ' not ranking yet' : (best != null ? 'across all locations' : 'no scans yet')},
+    {label:'Scanned', value: scannedCount + ' / ' + locCount, sub: locCount && scannedCount === locCount ? 'fully up to date' : 'locations checked at least once'},
+    {label:'Last scan', value: lastScan ? fmtWhen(lastScan) : 'never', sub: lastScan ? '' : 'run a scan to get started'}
+  ];
+  grid.innerHTML = tiles.map(t =>
+    '<div class="seo-stat"><div class="seo-stat-label">' + esc(t.label) + '</div>' +
+    '<div class="seo-stat-value' + (t.cls ? ' ' + t.cls : '') + '">' + esc(String(t.value)) + '</div>' +
+    (t.sub ? '<div class="seo-stat-sub">' + esc(t.sub) + '</div>' : '') + '</div>'
+  ).join('');
+}
+
 function renderSeoAll(){
   ensureSeoState();
   renderSeoTree();
@@ -5841,6 +5967,7 @@ function renderSeoAll(){
   renderSeoCrumbs();
   if (!c) return;
   seoLoadDashboard();
+  renderSeoStats(c);
   renderSeoKeywords();
   $('seoProviderHint').style.display = providerReady() ? 'none' : 'block';
 }
