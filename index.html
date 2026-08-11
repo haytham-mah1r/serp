@@ -711,6 +711,34 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-stat-value.bad{color:var(--lost);}
 .seo-stat-sub{font-size:11px; color:var(--ink-3); margin-top:3px;}
 
+/* ---- premium dashboard pass: everything below is scoped to
+   #seoDashboardView so the GBP tool's shared .card/.section-h/.sw
+   styling is never touched. ---- */
+#seoDashboardView .seo-section-h{margin:30px 0 13px;}
+#seoDashboardView .seo-section-h:first-child{margin-top:0;}
+#seoDashboardView .seo-section-h h2{display:flex; align-items:center; gap:9px;}
+#seoDashboardView .seo-section-h h2 svg{width:15px; height:15px; stroke:var(--brand-deep); flex:none;}
+#seoDashboardView .seo-section-h .rule{background:linear-gradient(90deg, var(--line) 0%, transparent 100%);}
+
+#seoDashboardView .card{transition:box-shadow .22s var(--ease), transform .22s var(--ease), border-color .22s var(--ease); padding:22px 24px;}
+#seoDashboardView .card:hover{box-shadow:var(--sh-3); border-color:#dde5eb; transform:translateY(-1px);}
+
+#seoDashboardView .seo-autoscan-card{border-left:3px solid var(--line); transition:border-color .25s var(--ease), background .25s var(--ease);}
+#seoDashboardView .seo-autoscan-card.seo-autoscan-on{border-left-color:var(--brand); background:linear-gradient(180deg, var(--brand-wash) 0%, var(--card) 130px);}
+#seoDashboardView .seo-autoscan-toggle i{width:40px; height:23px;}
+#seoDashboardView .seo-autoscan-toggle i::after{width:19px; height:19px;}
+#seoDashboardView .seo-autoscan-toggle input:checked + i::after{transform:translateX(17px);}
+
+#seoDashboardView .seo-danger-zone{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  background:#fdf5f3; border:1px dashed #f0bdb2; border-radius:var(--r-xl);
+  padding:18px 22px; margin-top:30px;
+}
+#seoDashboardView .seo-danger-title{font-weight:600; font-size:13.5px; color:var(--ink);}
+#seoDashboardView .seo-danger-sub{font-size:11.5px; color:var(--ink-3); margin-top:2px; max-width:56ch;}
+#seoDashboardView .seo-danger-zone .btn{border-color:#f0bdb2; flex:none;}
+#seoDashboardView .seo-danger-zone .btn:hover{background:#fbe6df;}
+
 .seo-status-dot{width:7px; height:7px; border-radius:50%; flex:none; display:inline-block;}
 .seo-status-dot.s-active{background:var(--good);}
 .seo-status-dot.s-paused{background:var(--ink-3);}
@@ -718,6 +746,18 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-status-dot.s-at-risk{background:var(--alert);}
 .seo-status-dot.s-cancelled{background:#c7cdd3;}
 .seo-tree-rank{font-family:var(--mono); font-size:10.5px; color:var(--ink-3); flex:none;}
+
+.seo-health-pill{font-size:10px; font-weight:700; letter-spacing:.02em; padding:3px 9px; border-radius:20px; flex:none; white-space:nowrap;}
+.seo-health-good{background:var(--good-wash); color:var(--good);}
+.seo-health-warn{background:#fbe6df; color:var(--alert);}
+.seo-health-pill-sm{font-size:9px; padding:2px 7px;}
+.seo-profile-status ~ .seo-health-pill{margin-left:2px;}
+
+.seo-lg-row-flagged{background:linear-gradient(90deg, #fef3ee 0%, transparent 70px); border-radius:8px; margin:0 -10px; padding-left:10px; padding-right:10px;}
+.seo-lg-flag{display:inline-flex; margin-left:5px; color:var(--alert); vertical-align:middle;}
+.seo-lg-flag svg{width:12px; height:12px; stroke:currentColor;}
+.seo-lg-flag-badge{display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; color:var(--alert); background:#fbe6df; border-radius:20px; padding:3px 9px 3px 7px; flex:none;}
+.seo-lg-flag-badge svg{width:11px; height:11px; stroke:currentColor;}
 
 .seo-kw-toolbar{display:flex; flex-direction:column; gap:14px;}
 .seo-kw-add{display:grid; grid-template-columns:1.3fr 1.1fr .8fr auto; gap:10px; align-items:end;}
@@ -1611,8 +1651,8 @@ body.embed-mode #mapCard{box-shadow:none;}
           <div class="seo-profile-head" id="seoProfileHead"></div>
           <div class="seo-stats-grid" id="seoStatsGrid"></div>
 
-          <div class="section-h seo-section-h"><h2>Automatic scans</h2><div class="rule"></div></div>
-          <div class="card seo-autoscan-card">
+          <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Automatic scans</h2><div class="rule"></div></div>
+          <div class="card seo-autoscan-card" id="seoAutoscanCard">
             <label class="sw seo-autoscan-toggle"><input type="checkbox" id="seoAutoEnabled"/><i></i><span><b>Run scans automatically</b> — only keywords that already have a location assigned are scanned.</span></label>
             <div id="seoAutoScanBody" style="display:none">
               <div class="g2">
@@ -1650,7 +1690,7 @@ body.embed-mode #mapCard{box-shadow:none;}
             <div class="hint" style="margin-top:12px">This schedule only fires while GBP Reporter is open in a browser tab somewhere. It checks once a minute and catches up on the next visit if a run was missed.</div>
           </div>
 
-          <div class="section-h seo-section-h"><h2>Client basics</h2><div class="rule"></div></div>
+          <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg>Client basics</h2><div class="rule"></div></div>
           <div class="card">
             <div class="g2">
               <div class="f">
@@ -1677,7 +1717,7 @@ body.embed-mode #mapCard{box-shadow:none;}
             </div>
           </div>
 
-          <div class="section-h seo-section-h"><h2>Tracking</h2><div class="rule"></div></div>
+          <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Tracking</h2><div class="rule"></div></div>
           <div class="card">
             <div class="g2">
               <div class="f">
@@ -1701,7 +1741,7 @@ body.embed-mode #mapCard{box-shadow:none;}
             </div>
           </div>
 
-          <div class="section-h seo-section-h"><h2>Links &amp; notes</h2><div class="rule"></div></div>
+          <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.36-1.36"/></svg>Links &amp; notes</h2><div class="rule"></div></div>
           <div class="card">
             <div class="g2">
               <div class="f">
@@ -1717,7 +1757,14 @@ body.embed-mode #mapCard{box-shadow:none;}
               <label for="seoNotes">Notes</label>
               <textarea id="seoNotes" rows="4" placeholder="Anything worth remembering about this client…"></textarea>
             </div>
-            <button class="btn" id="seoDeleteClientBtn" style="color:var(--alert)">Delete this client</button>
+          </div>
+
+          <div class="seo-danger-zone">
+            <div>
+              <div class="seo-danger-title">Delete this client</div>
+              <div class="seo-danger-sub">Removes all of their keywords, locations and scan history. This can't be undone.</div>
+            </div>
+            <button class="btn" id="seoDeleteClientBtn" style="color:var(--alert)">Delete client</button>
           </div>
         </div>
       </div>
@@ -5551,6 +5598,34 @@ function seoClientBestRank(c){
   c.keywords.forEach(k => { const b = seoKeywordBestRank(k); if (b != null && (best == null || b < best)) best = b; });
   return best;
 }
+
+/* ---------- health status: only meaningful for clients whose keywords
+   are actually being kept fresh by Automatic scans. A location counts
+   as "flagged" when its most recent scan is meaningfully worse than the
+   one before it — lost its ranking entirely, or dropped 3+ positions.
+   Small 1–2 position wobbles are normal SERP noise and don't flag. ---------- */
+function seoLocFlagged(loc){
+  if (loc.prevRank == null || loc.rank == null || loc.prevRank === loc.rank) return false;
+  if (loc.rank === 0 && loc.prevRank > 0) return true;
+  if (loc.rank > 0 && loc.prevRank > 0 && (loc.rank - loc.prevRank) >= 3) return true;
+  return false;
+}
+function seoClientHealth(c){
+  if (!c.autoScan || !c.autoScan.enabled) return null;
+  let flagged = 0;
+  c.keywords.forEach(k => k.locations.forEach(loc => { if (seoLocFlagged(loc)) flagged++; }));
+  return {status: flagged ? 'check' : 'healthy', flaggedCount: flagged};
+}
+function seoHealthPillHtml(health, size){
+  if (!health) return '';
+  const cls = health.status === 'healthy' ? 'seo-health-good' : 'seo-health-warn';
+  const label = health.status === 'healthy' ? 'Healthy' : 'Check';
+  const title = health.status === 'healthy'
+    ? 'No unexpected ranking drops on the last scan.'
+    : health.flaggedCount + ' keyword location' + (health.flaggedCount === 1 ? '' : 's') + ' dropped since the last scan.';
+  return '<span class="seo-health-pill ' + cls + (size ? ' ' + size : '') + '" title="' + esc(title) + '">' + label + '</span>';
+}
+
 function seoStatusDotClass(status){
   const s = (status || '').toLowerCase();
   if (s === 'active') return 's-active';
@@ -5674,6 +5749,7 @@ async function seoScanAndRender(c, pairs){
   save(); renderSeoKeywords();
   bar.style.display = 'none';
   toast(seoScanStop ? 'Scan stopped' : 'Scan complete \u2014 results saved');
+  renderSeoTree();
 }
 
 /* ---------- rail ---------- */
@@ -5696,8 +5772,10 @@ function renderSeoTree(){
     const kwCount = c.keywords.length;
     const best = seoClientBestRank(c);
     const bestHtml = best != null ? '<span class="seo-tree-rank">#' + best + '</span>' : '';
+    const healthHtml = seoHealthPillHtml(seoClientHealth(c), 'seo-health-pill-sm');
     row.innerHTML = '<span class="seo-status-dot ' + seoStatusDotClass(c.status) + '" title="' + esc(c.status || 'Active') + '"></span>' +
       '<span class="tree-name">' + esc(c.name || 'Untitled') + '</span>' +
+      healthHtml +
       bestHtml +
       '<span class="tree-count">' + kwCount + '</span>' +
       '<button class="tree-kill" title="Delete client">\u00d7</button>';
@@ -5749,6 +5827,7 @@ function renderSeoProfileHead(c){
     '<div class="seo-profile-info">' +
       '<div class="seo-profile-name">' + esc(c.name || 'Untitled') +
         '<span class="seo-profile-status ' + seoStatusDotClass(c.status) + '">' + esc(c.status || 'Active') + '</span>' +
+        seoHealthPillHtml(seoClientHealth(c)) +
       '</div>' +
       (meta.length ? '<div class="seo-profile-meta">' + meta.join('<span>\u00b7</span>') + '</div>' : '') +
     '</div>';
@@ -5772,6 +5851,7 @@ function seoLoadAutoScan(c){
   const a = c.autoScan;
   $('seoAutoEnabled').checked = !!a.enabled;
   $('seoAutoScanBody').style.display = a.enabled ? 'block' : 'none';
+  $('seoAutoscanCard').classList.toggle('seo-autoscan-on', !!a.enabled);
   $('seoAutoFrequency').value = a.frequency || 'weekly';
   $('seoAutoTime').value = a.time || '09:00';
   $('seoAutoDayOfMonth').value = a.dayOfMonth || 1;
@@ -5821,7 +5901,7 @@ function seoRenderAutoScanStatus(c){
 $('seoAutoEnabled').addEventListener('change', () => {
   const c = activeSeoClient(); if (!c) return;
   c.autoScan.enabled = $('seoAutoEnabled').checked;
-  save(); seoLoadAutoScan(c);
+  save(); seoLoadAutoScan(c); renderSeoProfileHead(c); renderSeoTree();
 });
 $('seoAutoFrequency').addEventListener('change', () => {
   const c = activeSeoClient(); if (!c) return;
@@ -5875,7 +5955,8 @@ async function seoAutoScanClient(c){
   });
   save();
   const active = activeSeoClient();
-  if (active && active.id === c.id){ renderSeoKeywords(); renderSeoStats(c); }
+  if (active && active.id === c.id){ renderSeoKeywords(); renderSeoStats(c); renderSeoProfileHead(c); }
+  renderSeoTree();
   return pairs.length;
 }
 async function seoRunDueSchedules(){
@@ -5973,6 +6054,15 @@ function seoLocGroupRow(c, k, loc){
     }
   } else {
     deltaBox.textContent = '\u2014';
+  }
+  const flagged = seoLocFlagged(loc);
+  if (flagged){
+    row.classList.add('seo-lg-row-flagged');
+    const flag = document.createElement('span');
+    flag.className = 'seo-lg-flag';
+    flag.title = 'Dropped meaningfully since the last scan';
+    flag.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>';
+    deltaBox.appendChild(flag);
   }
 
   const sourceUrl = loc.sourceUrl || null;
@@ -6147,6 +6237,9 @@ function seoGroupRankSummary(entries){
   entries.forEach(({loc}) => { if (loc.rank != null && loc.rank > 0){ count++; if (best == null || loc.rank < best) best = loc.rank; } });
   return best;
 }
+function seoGroupFlaggedCount(entries){
+  return entries.reduce((n, {loc}) => n + (seoLocFlagged(loc) ? 1 : 0), 0);
+}
 
 function renderSeoKeywords(){
   const c = activeSeoClient(); if (!c) return;
@@ -6234,7 +6327,9 @@ function renderSeoKeywords(){
 
   groups.forEach(g => {
     const best = seoGroupRankSummary(g.entries);
-    const badgeHtml = '<span class="seo-lg-count">' + g.entries.length + ' keyword' + (g.entries.length === 1 ? '' : 's') + '</span>' + seoRankPill(best);
+    const flaggedCount = seoGroupFlaggedCount(g.entries);
+    const flagHtml = flaggedCount ? '<span class="seo-lg-flag-badge" title="' + flaggedCount + ' dropped since the last scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>' + flaggedCount + '</span>' : '';
+    const badgeHtml = '<span class="seo-lg-count">' + g.entries.length + ' keyword' + (g.entries.length === 1 ? '' : 's') + '</span>' + flagHtml + seoRankPill(best);
     buildGroupCard(g.key, g.label, badgeHtml, (body) => {
       g.entries
         .sort((a, b) => a.k.text.localeCompare(b.k.text))
