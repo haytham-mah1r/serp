@@ -644,6 +644,61 @@ kbd{font-family:var(--mono);font-size:10.5px;background:#fff;border:1px solid va
 
 /* ---------------- auth gate (loading / sign-in) ---------------- */
 .hidden{display:none !important;}
+body.embed-mode .module-switch{display:none !important;}
+body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
+
+/* ==========================================================================
+   SEO CLIENTS MODULE — additive styles only; nothing above this point
+   was touched, so the GBP Reporter looks and behaves exactly as before.
+   ========================================================================== */
+.module-switch{grid-column:1/-1; background:var(--console); border-bottom:1px solid var(--console-line); padding:10px 20px;}
+.module-switch-inner{display:flex; gap:8px; max-width:520px;}
+.mod-btn{flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:9px 14px; border-radius:var(--r-md); border:1px solid var(--console-line); background:var(--console-2); color:var(--console-ink-2); font-family:var(--ui); font-size:12.5px; font-weight:600; cursor:pointer; transition:all .15s var(--ease);}
+.mod-btn svg{width:15px; height:15px; stroke:currentColor; flex:none;}
+.mod-btn:hover{color:var(--console-ink); border-color:#465162;}
+.mod-btn.on{background:var(--brand); border-color:var(--brand); color:#fff;}
+
+.seo-kw-toolbar{display:flex; flex-direction:column; gap:12px;}
+.seo-kw-add{display:grid; grid-template-columns:1.4fr 1fr .9fr auto; gap:8px;}
+.seo-kw-add input, .seo-kw-add select{padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--line); font-family:var(--ui); font-size:13px; background:var(--card-2);}
+.seo-kw-actions{display:flex; gap:8px; flex-wrap:wrap;}
+.seo-scan-progress{display:flex; align-items:center; gap:10px; font-size:12px; color:var(--ink-2);}
+.seo-scan-bar{flex:1; height:6px; border-radius:4px; background:var(--line); overflow:hidden;}
+.seo-scan-bar i{display:block; height:100%; width:0%; background:var(--brand); transition:width .2s var(--ease);}
+
+.seo-kw-empty{padding:32px; text-align:center; color:var(--ink-3); font-size:13px;}
+.seo-kw-row{border-bottom:1px solid var(--line-2);}
+.seo-kw-row:last-child{border-bottom:none;}
+.seo-kw-head{display:flex; align-items:center; gap:10px; padding:13px 16px; cursor:pointer;}
+.seo-kw-head:hover{background:var(--card-2);}
+.seo-kw-caret{width:9px; height:9px; border-right:2px solid var(--ink-3); border-bottom:2px solid var(--ink-3); transform:rotate(-45deg); transition:transform .15s var(--ease); flex:none;}
+.seo-kw-row.open .seo-kw-caret{transform:rotate(45deg);}
+.seo-kw-text{flex:1; font-weight:600; font-size:13.5px; color:var(--ink);}
+.seo-kw-best{font-family:var(--mono); font-size:11.5px;}
+.seo-kw-locs-count{font-size:11px; color:var(--ink-3); background:var(--card-2); border:1px solid var(--line); border-radius:20px; padding:2px 9px;}
+.seo-kw-del{border:none; background:none; color:var(--ink-3); cursor:pointer; font-size:16px; line-height:1; padding:2px 6px; border-radius:6px;}
+.seo-kw-del:hover{color:var(--alert); background:var(--good-wash);}
+.seo-kw-body{display:none; padding:0 16px 14px 35px;}
+.seo-kw-row.open .seo-kw-body{display:block;}
+.seo-loc-row{display:grid; grid-template-columns:1.3fr .9fr auto auto 1fr auto auto; gap:8px; align-items:center; padding:8px 0; border-top:1px dashed var(--line-2);}
+.seo-loc-row:first-child{border-top:none;}
+.seo-loc-row input[type=text], .seo-loc-row select{padding:7px 9px; border-radius:7px; border:1px solid var(--line); font-family:var(--ui); font-size:12.5px; background:var(--card-2); width:100%;}
+.seo-loc-rank{font-family:var(--mono); font-weight:700; font-size:13px; text-align:center; min-width:34px;}
+.seo-loc-delta{font-family:var(--mono); font-size:11px; text-align:center;}
+.seo-loc-delta.up{color:var(--good);}
+.seo-loc-delta.down{color:var(--bad);}
+.seo-loc-meta{font-size:10.5px; color:var(--ink-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.seo-loc-meta a{color:var(--ink-2);}
+.seo-loc-btns{display:flex; gap:4px;}
+.seo-loc-add-btn{border:1px dashed var(--line); background:none; border-radius:8px; color:var(--ink-2); font-size:12px; padding:7px 10px; cursor:pointer; margin-top:8px;}
+.seo-loc-add-btn:hover{border-color:var(--brand); color:var(--brand-deep);}
+.seo-manual-tag{font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--brand-deep); background:var(--brand-wash); border-radius:5px; padding:1px 5px; margin-left:4px;}
+.modal-wide{max-width:640px;}
+.modal-wide textarea{width:100%; padding:10px 12px; border-radius:var(--r-sm); border:1px solid var(--line); font-family:var(--mono); font-size:12.5px; resize:vertical;}
+@media (max-width:900px){
+  .seo-kw-add{grid-template-columns:1fr 1fr;}
+  .seo-loc-row{grid-template-columns:1fr 1fr; row-gap:6px;}
+}
 .auth-screen{
   position:fixed; inset:0; z-index:9000; display:none; place-items:center;
   background:linear-gradient(160deg,#1c232b 0%,#10141a 100%);
@@ -746,8 +801,22 @@ body.embed-mode #mapCard{box-shadow:none;}
 </div>
 
 <div class="shell hidden" id="appShell">
+  <!-- ==================== MODULE SWITCH ==================== -->
+  <div class="module-switch" id="moduleSwitch">
+    <div class="module-switch-inner">
+      <button class="mod-btn on" data-module="gbp" id="modBtnGbp">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 21s-7-5.33-7-11a7 7 0 0 1 14 0c0 5.67-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+        GBP Locations
+      </button>
+      <button class="mod-btn" data-module="seo" id="modBtnSeo">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+        SEO Clients
+      </button>
+    </div>
+  </div>
+
   <!-- ==================== CONSOLE RAIL ==================== -->
-  <aside class="rail">
+  <aside class="rail" id="gbpRail">
     <div class="rail-brand">
       <div class="rail-mark"><img id="brandLogo" alt="EDGE Marketing &amp; Design"/></div>
       <div>
@@ -784,7 +853,7 @@ body.embed-mode #mapCard{box-shadow:none;}
   </aside>
 
   <!-- ==================== STAGE ==================== -->
-  <main class="stage">
+  <main class="stage" id="gbpStage">
     <header class="topbar">
       <div class="crumbs" id="crumbs"><span class="c-main">No client selected</span></div>
       <nav class="modes">
@@ -1362,6 +1431,188 @@ body.embed-mode #mapCard{box-shadow:none;}
       </div>
     </div>
   </main>
+
+  <!-- ==================== SEO CLIENTS RAIL ==================== -->
+  <aside class="rail" id="seoRail" style="display:none">
+    <div class="rail-brand">
+      <div class="rail-mark"><img id="seoBrandLogo" alt="EDGE Marketing &amp; Design"/></div>
+      <div>
+        <h1>SEO Clients</h1>
+        <p>Keyword rank tracker</p>
+      </div>
+    </div>
+
+    <div class="rail-search">
+      <div class="rail-search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="seoClientSearch" type="text" placeholder="Find a client" autocomplete="off"/>
+      </div>
+    </div>
+
+    <div class="rail-head">
+      <span>Clients</span>
+      <button class="rail-add" id="seoAddClientBtn" title="Add a client">+</button>
+    </div>
+
+    <div class="rail-tree" id="seoClientTree"></div>
+
+    <div class="rail-foot">
+      <div class="sync" id="seoSyncPill"><i></i><span>Saved with GBP Reporter data</span></div>
+      <div class="mini-row">
+        <button class="mini-btn" id="seoExportAllBtn">Export all (.xlsx)</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ==================== SEO CLIENTS STAGE ==================== -->
+  <main class="stage" id="seoStage" style="display:none">
+    <header class="topbar">
+      <div class="crumbs" id="seoCrumbs"><span class="c-main">No client selected</span></div>
+      <nav class="modes">
+        <button class="mode on" data-seoview="dashboard">Dashboard</button>
+        <button class="mode" data-seoview="keywords">Keywords</button>
+      </nav>
+      <div class="save-pill" id="seoSavePill"><i></i><span>Autosave on</span></div>
+    </header>
+
+    <div class="panels">
+
+      <!-- ============ DASHBOARD ============ -->
+      <div class="view on" id="seoview-dashboard">
+        <div class="empty" id="seoEmptyState">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+          <h3>Start with a client</h3>
+          <p>Add an SEO client, fill in their details, then drop in the keywords you track for them — with as many locations per keyword as you need. Searches run live and save themselves automatically.</p>
+          <button class="btn btn-go" id="seoEmptyAddBtn">Add your first SEO client</button>
+        </div>
+
+        <div id="seoDashboardView" style="display:none">
+          <div class="card">
+            <div class="eyebrow">Client details</div>
+            <div class="g2">
+              <div class="f">
+                <label for="seoName">Client name</label>
+                <input id="seoName" type="text" placeholder="Advance Construction" autocomplete="off"/>
+              </div>
+              <div class="f">
+                <label for="seoStatus">Status</label>
+                <select id="seoStatus">
+                  <option>Active</option><option>Paused</option><option>Onboarding</option>
+                  <option>At risk</option><option>Cancelled</option>
+                </select>
+              </div>
+            </div>
+            <div class="g2">
+              <div class="f">
+                <label for="seoLead">Project lead</label>
+                <input id="seoLead" type="text" placeholder="Robert" autocomplete="off"/>
+              </div>
+              <div class="f">
+                <label for="seoCms">CMS</label>
+                <input id="seoCms" type="text" placeholder="WordPress" autocomplete="off"/>
+              </div>
+            </div>
+            <div class="g2">
+              <div class="f">
+                <label for="seoWebsite">Website <span class="opt">used to detect this client's rank in results</span></label>
+                <input id="seoWebsite" type="text" placeholder="advanceconstruction.ca" autocomplete="off"/>
+              </div>
+              <div class="f">
+                <label for="seoHours">Allocated hours</label>
+                <input id="seoHours" type="text" placeholder="5 Hours" autocomplete="off"/>
+              </div>
+            </div>
+            <div class="g2">
+              <div class="f">
+                <label for="seoProgress">Monthly progress</label>
+                <input id="seoProgress" type="text" placeholder="On track" autocomplete="off"/>
+              </div>
+              <div class="f">
+                <label for="seoLastCall">Last monthly call</label>
+                <input id="seoLastCall" type="date"/>
+              </div>
+            </div>
+            <div class="g2">
+              <div class="f">
+                <label for="seoBasecamp">Basecamp link</label>
+                <input id="seoBasecamp" type="text" placeholder="https://3.basecamp.com/…" autocomplete="off"/>
+              </div>
+              <div class="f">
+                <label for="seoReportLink">Report / rank-tracker link <span class="opt">e.g. Agency Analytics</span></label>
+                <input id="seoReportLink" type="text" placeholder="https://…/rank-tracker/keywords" autocomplete="off"/>
+              </div>
+            </div>
+            <div class="f">
+              <label for="seoNotes">Notes</label>
+              <textarea id="seoNotes" rows="4" placeholder="Anything worth remembering about this client…"></textarea>
+            </div>
+            <button class="btn" id="seoDeleteClientBtn" style="color:var(--alert)">Delete this client</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ KEYWORDS ============ -->
+      <div class="view" id="seoview-keywords">
+        <div id="seoKeywordsView" style="display:none">
+
+          <div class="card seo-kw-toolbar">
+            <div class="seo-kw-add">
+              <input id="seoNewKeyword" type="text" placeholder="Add a keyword…" autocomplete="off"/>
+              <input id="seoNewLocation" type="text" placeholder="Location (city, region)…" autocomplete="off"/>
+              <select id="seoNewRegion"></select>
+              <button class="btn btn-dark" id="seoAddKeywordBtn">Add</button>
+            </div>
+            <div class="seo-kw-actions">
+              <button class="btn" id="seoBulkImportBtn">Bulk import keywords</button>
+              <button class="btn btn-go" id="seoScanAllBtn">Scan all keywords</button>
+              <button class="btn" id="seoExportClientBtn">Export client (.xlsx)</button>
+            </div>
+            <div class="seo-scan-progress" id="seoScanProgress" style="display:none">
+              <div class="seo-scan-bar"><i id="seoScanBarFill"></i></div>
+              <span id="seoScanProgressLabel">Scanning…</span>
+              <button class="btn btn-sm" id="seoScanStopBtn">Stop</button>
+            </div>
+            <div class="hint" id="seoProviderHint" style="display:none">Live search isn't configured yet. Switch to <b>GBP Locations → SERP checker settings (step 4)</b> and add your DataForSEO or Serper key — the same key powers keyword checks here.</div>
+          </div>
+
+          <div class="tbl-card">
+            <div id="seoKeywordList"></div>
+            <div class="seo-kw-empty" id="seoKeywordEmpty" style="display:none">No keywords yet. Add one above or bulk-import a whole list.</div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- ==================== SEO BULK IMPORT MODAL ==================== -->
+<div class="backdrop" id="seoBulkBackdrop">
+  <div class="modal modal-wide">
+    <h3>Bulk import keywords</h3>
+    <p>One keyword per line. Add a location after a <code>|</code> — separate several locations with a <code>;</code>. Lines with no location use the default location below. Every keyword launches a live search automatically once imported.</p>
+    <div class="g2">
+      <div class="f">
+        <label for="seoBulkDefaultLocation">Default location</label>
+        <input id="seoBulkDefaultLocation" type="text" placeholder="Red Deer, AB" autocomplete="off"/>
+      </div>
+      <div class="f">
+        <label for="seoBulkDefaultRegion">Default region</label>
+        <select id="seoBulkDefaultRegion"></select>
+      </div>
+    </div>
+    <div class="f">
+      <label for="seoBulkText">Keywords</label>
+      <textarea id="seoBulkText" rows="10" placeholder="concrete contractor red deer
+foundation repair | Red Deer, AB
+custom home builder | Red Deer, AB; Calgary, AB"></textarea>
+    </div>
+    <div class="acts">
+      <button class="btn" id="seoBulkCancel">Cancel</button>
+      <button class="btn btn-go" id="seoBulkOk">Import &amp; scan</button>
+    </div>
+  </div>
 </div>
 
 <div class="backdrop" id="backdrop">
@@ -1385,6 +1636,7 @@ window.EDGE_LOGO_RATIO = 512/200;
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -4971,6 +5223,542 @@ if (EMBED_ID){
   initCloud();
 }
 
+</script>
+
+<!-- ==========================================================================
+     SEO CLIENTS MODULE — a second, independent script block.
+     It only reads/writes state.seoClients (a new array alongside the GBP
+     tool's state.clients) and reuses the GBP engine's autosave, geocoding
+     and live-search functions so results are exactly as accurate as the
+     rank grid. Nothing above this point was changed in a way that affects
+     behaviour — GBP Reporter works exactly as it did before.
+     ========================================================================== -->
+<script>
+(function(){
+
+/* ---------- data model ---------- */
+function blankSeoClient(name){
+  return {
+    id: uid(), name: name || 'New client', projectLead:'', cms:'', status:'Active',
+    allocatedHours:'', monthlyProgress:'', lastMonthlyCall:'', website:'', basecampLink:'',
+    reportLink:'', notes:'', activeKeywordId:null, locationCache:{}, keywords:[]
+  };
+}
+function blankSeoLocation(label, regionIdx){
+  return {
+    id: uid(), label: label || '', regionIdx: regionIdx || 0, lat:null, lng:null,
+    rank:null, prevRank:null, matchedTitle:null, matchedDomain:null, sourceUrl:null,
+    checkedAt:null, manual:false, error:null, history:[]
+  };
+}
+function migrateSeoClient(c){
+  if (typeof c.name !== 'string') c.name = c.name || 'Client';
+  if (!Array.isArray(c.keywords)) c.keywords = [];
+  if (!c.locationCache || typeof c.locationCache !== 'object') c.locationCache = {};
+  c.keywords.forEach(k => {
+    if (!k.id) k.id = uid();
+    if (!Array.isArray(k.locations)) k.locations = [];
+    k.locations.forEach(l => {
+      if (!l.id) l.id = uid();
+      if (!Array.isArray(l.history)) l.history = [];
+      if (typeof l.manual !== 'boolean') l.manual = false;
+    });
+  });
+  ['projectLead','cms','allocatedHours','monthlyProgress','lastMonthlyCall','website','basecampLink','reportLink','notes'].forEach(k => {
+    if (typeof c[k] !== 'string') c[k] = c[k] || '';
+  });
+  if (!c.status) c.status = 'Active';
+  return c;
+}
+function ensureSeoState(){
+  if (!Array.isArray(state.seoClients)) state.seoClients = [];
+  state.seoClients.forEach(migrateSeoClient);
+  if (state.activeSeoClientId === undefined) state.activeSeoClientId = null;
+  if (!state.seoModule) state.seoModule = 'gbp';
+}
+ensureSeoState();
+
+const activeSeoClient = () => state.seoClients.find(c => c.id === state.activeSeoClientId) || null;
+
+/* ---------- rank helpers (same thresholds as the GBP keyword finder) ---------- */
+function seoRankPill(rank){
+  if (rank == null) return '<span class="rank-pill rp-none">—</span>';
+  if (rank === 0) return '<span class="rank-pill rp-bad">100+</span>';
+  const cls = rank <= 3 ? 'rp-good' : rank <= 10 ? 'rp-mid' : 'rp-bad';
+  return '<span class="rank-pill ' + cls + '">#' + rank + '</span>';
+}
+function fmtWhen(ts){
+  if (!ts) return 'never checked';
+  const d = new Date(ts);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+function seoKeywordBestRank(k){
+  let best = null;
+  k.locations.forEach(l => { if (l.rank != null && l.rank > 0 && (best == null || l.rank < best)) best = l.rank; });
+  return best;
+}
+
+/* ---------- live search — reuses the exact same engine as the rank grid:
+   providerQuery() (DataForSEO / Serper, per the settings on step 4),
+   nominatim() for geocoding, and buildScanUrl() for a real, openable
+   Google search link that shows exactly where the result came from. ---------- */
+async function seoResolveLocation(client, loc){
+  const key = (loc.label || '').trim().toLowerCase();
+  if (!key) return null;
+  const cached = client.locationCache[key];
+  if (cached && cached.lat != null) return cached;
+  const region = REGIONS[loc.regionIdx || 0] || REGIONS[0];
+  const q = loc.label + (region ? ', ' + region.gl : '');
+  const hit = await nominatim(q);
+  if (hit){
+    const g = { lat: parseFloat(hit.lat), lng: parseFloat(hit.lon) };
+    client.locationCache[key] = g;
+    return g;
+  }
+  return null;
+}
+
+async function seoScanOne(client, kw, loc){
+  if (!loc.label || !loc.label.trim()){ loc.error = 'Add a location first.'; return; }
+  if (!client.website || !client.website.trim()){ loc.error = 'Add this client\'s website on the Dashboard tab first.'; return; }
+  if (!providerReady()){ loc.error = 'Search provider isn\'t configured yet.'; return; }
+  const region = REGIONS[loc.regionIdx || 0] || REGIONS[0];
+  let g = (loc.lat != null && loc.lng != null) ? {lat:loc.lat, lng:loc.lng} : null;
+  if (!g){
+    try{ g = await seoResolveLocation(client, loc); }catch(e){ g = null; }
+  }
+  if (!g){ loc.error = 'Couldn\u2019t locate \u201c' + loc.label + '\u201d.'; return; }
+  loc.lat = g.lat; loc.lng = g.lng;
+  try{
+    const depth = state.settings.depth || 100;
+    const data = await providerQuery(kw.text, {lat:g.lat, lng:g.lng}, region, 'web', {depth});
+    const organic = data.organic || [];
+    let found = null, idx = -1;
+    for (let i = 0; i < organic.length; i++){
+      if (domainMatches(organic[i].domain, client.website)){ found = organic[i]; idx = i; break; }
+    }
+    loc.prevRank = loc.rank;
+    loc.rank = idx >= 0 ? idx + 1 : 0;
+    loc.matchedTitle = found ? found.title : null;
+    loc.matchedDomain = found ? found.domain : null;
+    loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web'});
+    loc.checkedAt = Date.now();
+    loc.manual = false;
+    loc.error = null;
+    loc.history = loc.history || [];
+    loc.history.push({rank: loc.rank, checkedAt: loc.checkedAt});
+    if (loc.history.length > 60) loc.history.shift();
+  }catch(err){
+    loc.error = (err && err.message) ? err.message : 'Search failed';
+  }
+}
+
+let seoScanStop = false;
+async function seoScanAndRender(c, pairs){
+  pairs = pairs.filter(p => p.loc.label && p.loc.label.trim());
+  if (!pairs.length){ toast('Add at least one keyword with a location first', 'err'); return; }
+  if (!c.website || !c.website.trim()){ toast('Add this client\u2019s website on the Dashboard tab first \u2014 rank checks need it.', 'err'); return; }
+  if (!providerReady()){ toast('Configure a search provider first: GBP Locations \u2192 step 4', 'err'); return; }
+  seoScanStop = false;
+  const bar = $('seoScanProgress'), fill = $('seoScanBarFill'), label = $('seoScanProgressLabel');
+  bar.style.display = 'flex'; fill.style.width = '0%'; label.textContent = 'Scanning 0 / ' + pairs.length + '\u2026';
+  $('seoScanStopBtn').onclick = () => { seoScanStop = true; };
+  let done = 0;
+  await runPool(pairs.length, state.settings.concurrency || 6, () => seoScanStop, async (i) => {
+    await seoScanOne(c, pairs[i].k, pairs[i].loc);
+    done++;
+    fill.style.width = Math.round(done / pairs.length * 100) + '%';
+    label.textContent = 'Scanning ' + done + ' / ' + pairs.length + '\u2026';
+    if (done % 3 === 0){ save(); renderSeoKeywords(); }
+  });
+  save(); renderSeoKeywords();
+  bar.style.display = 'none';
+  toast(seoScanStop ? 'Scan stopped' : 'Scan complete \u2014 results saved');
+}
+
+/* ---------- rail ---------- */
+function renderSeoTree(){
+  const tree = $('seoClientTree');
+  const filter = ($('seoClientSearch').value || '').toLowerCase().trim();
+  tree.innerHTML = '';
+  const list = state.seoClients.filter(c => !filter || (c.name || '').toLowerCase().includes(filter));
+  if (!list.length){
+    const empty = document.createElement('div');
+    empty.className = 'rail-empty';
+    empty.textContent = state.seoClients.length ? 'No clients match your search.' : 'No SEO clients yet \u2014 add your first one.';
+    tree.appendChild(empty);
+    return;
+  }
+  list.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'tree-row' + (c.id === state.activeSeoClientId ? ' on' : '');
+    const kwCount = c.keywords.length;
+    row.innerHTML = '<span class="tree-name">' + esc(c.name || 'Untitled') + '</span>' +
+      '<span class="tree-count">' + kwCount + '</span>' +
+      '<button class="tree-kill" title="Delete client">\u00d7</button>';
+    row.addEventListener('click', e => {
+      if (e.target.closest('.tree-kill')) return;
+      state.activeSeoClientId = c.id; save(); renderSeoAll();
+    });
+    row.querySelector('.tree-kill').addEventListener('click', e => {
+      e.stopPropagation();
+      if (!confirm('Delete \u201c' + (c.name || 'this client') + '\u201d and all of its keywords?')) return;
+      state.seoClients = state.seoClients.filter(x => x.id !== c.id);
+      if (state.activeSeoClientId === c.id) state.activeSeoClientId = state.seoClients.length ? state.seoClients[0].id : null;
+      save(); renderSeoTree(); renderSeoAll();
+      toast('Client deleted');
+    });
+    tree.appendChild(row);
+  });
+}
+
+async function seoAddClient(){
+  const name = await ask('Add an SEO client', 'What should we call them?', 'Client name');
+  if (!name) return;
+  const c = blankSeoClient(name);
+  state.seoClients.push(c);
+  state.activeSeoClientId = c.id;
+  save(); renderSeoTree(); renderSeoAll();
+  toast('Client added');
+}
+$('seoAddClientBtn').addEventListener('click', seoAddClient);
+$('seoEmptyAddBtn').addEventListener('click', seoAddClient);
+$('seoClientSearch').addEventListener('input', renderSeoTree);
+
+/* ---------- dashboard ---------- */
+function renderSeoCrumbs(){
+  const c = activeSeoClient();
+  $('seoCrumbs').innerHTML = c
+    ? '<span class="c-main">' + esc(c.name || 'Untitled') + '</span><span class="c-sep">\u203a</span><span class="c-tag">' + esc(c.status || 'Active') + '</span>'
+    : '<span class="c-main">No client selected</span>';
+}
+function seoLoadDashboard(){
+  const c = activeSeoClient(); if (!c) return;
+  $('seoName').value = c.name || '';
+  $('seoStatus').value = c.status || 'Active';
+  $('seoLead').value = c.projectLead || '';
+  $('seoCms').value = c.cms || '';
+  $('seoWebsite').value = c.website || '';
+  $('seoHours').value = c.allocatedHours || '';
+  $('seoProgress').value = c.monthlyProgress || '';
+  $('seoLastCall').value = c.lastMonthlyCall || '';
+  $('seoBasecamp').value = c.basecampLink || '';
+  $('seoReportLink').value = c.reportLink || '';
+  $('seoNotes').value = c.notes || '';
+}
+const SEO_FIELD_MAP = [
+  ['seoName','name','input'], ['seoStatus','status','change'], ['seoLead','projectLead','input'],
+  ['seoCms','cms','input'], ['seoWebsite','website','input'], ['seoHours','allocatedHours','input'],
+  ['seoProgress','monthlyProgress','input'], ['seoLastCall','lastMonthlyCall','change'],
+  ['seoBasecamp','basecampLink','input'], ['seoReportLink','reportLink','input'], ['seoNotes','notes','input']
+];
+SEO_FIELD_MAP.forEach(([id, key, evt]) => {
+  $(id).addEventListener(evt, () => {
+    const c = activeSeoClient(); if (!c) return;
+    c[key] = $(id).value;
+    if (key === 'name'){ renderSeoTree(); renderSeoCrumbs(); }
+    if (key === 'status') renderSeoCrumbs();
+    save();
+  });
+});
+$('seoDeleteClientBtn').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  if (!confirm('Delete \u201c' + (c.name || 'this client') + '\u201d and all of its keywords? This can\u2019t be undone.')) return;
+  state.seoClients = state.seoClients.filter(x => x.id !== c.id);
+  state.activeSeoClientId = state.seoClients.length ? state.seoClients[0].id : null;
+  save(); renderSeoTree(); renderSeoAll();
+  toast('Client deleted');
+});
+
+/* ---------- keywords ---------- */
+function seoLocationRow(c, k, loc){
+  const row = document.createElement('div');
+  row.className = 'seo-loc-row';
+
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text'; labelInput.placeholder = 'City, region\u2026'; labelInput.value = loc.label || '';
+  labelInput.addEventListener('change', () => {
+    if (labelInput.value.trim() !== loc.label){ loc.lat = null; loc.lng = null; }
+    loc.label = labelInput.value.trim(); save();
+  });
+
+  const regionSel = document.createElement('select');
+  fillRegions(regionSel);
+  regionSel.value = loc.regionIdx || 0;
+  regionSel.addEventListener('change', () => { loc.regionIdx = +regionSel.value; loc.lat = null; loc.lng = null; save(); });
+
+  const rankBox = document.createElement('div');
+  rankBox.innerHTML = seoRankPill(loc.rank) + (loc.manual ? '<span class="seo-manual-tag">manual</span>' : '');
+
+  const deltaBox = document.createElement('div');
+  deltaBox.className = 'seo-loc-delta';
+  if (loc.rank != null && loc.prevRank != null && loc.prevRank !== loc.rank){
+    if (loc.rank === 0){ deltaBox.textContent = '\u25bc lost'; deltaBox.classList.add('down'); }
+    else if (loc.prevRank === 0){ deltaBox.textContent = '\u25b2 found'; deltaBox.classList.add('up'); }
+    else {
+      const d = loc.prevRank - loc.rank;
+      deltaBox.textContent = (d > 0 ? '\u25b2 +' : '\u25bc ') + Math.abs(d);
+      deltaBox.classList.add(d > 0 ? 'up' : 'down');
+    }
+  } else {
+    deltaBox.textContent = '\u2014';
+  }
+
+  const meta = document.createElement('div');
+  meta.className = 'seo-loc-meta';
+  if (loc.error) meta.innerHTML = '<span style="color:var(--alert)">' + esc(loc.error) + '</span>';
+  else if (loc.sourceUrl) meta.innerHTML = esc(fmtWhen(loc.checkedAt)) + ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">source</a>';
+  else meta.textContent = 'never checked';
+
+  const rankInput = document.createElement('input');
+  rankInput.type = 'text'; rankInput.inputMode = 'numeric'; rankInput.placeholder = 'set #';
+  rankInput.style.maxWidth = '64px'; rankInput.title = 'Type a rank to override manually (0 = not ranking)';
+  rankInput.addEventListener('change', () => {
+    const v = rankInput.value.trim();
+    if (v === '') return;
+    const n = parseInt(v, 10);
+    if (isNaN(n) || n < 0){ toast('Enter a whole number \u2014 0 means not ranking', 'err'); rankInput.value = ''; return; }
+    loc.prevRank = loc.rank; loc.rank = n; loc.manual = true; loc.checkedAt = Date.now(); loc.error = null;
+    loc.history = loc.history || []; loc.history.push({rank:n, checkedAt:loc.checkedAt, manual:true});
+    save(); renderSeoKeywords();
+    toast('Rank set manually');
+  });
+
+  const btns = document.createElement('div');
+  btns.className = 'seo-loc-btns';
+  const rescanBtn = document.createElement('button');
+  rescanBtn.className = 'btn btn-sm'; rescanBtn.textContent = 'Scan';
+  rescanBtn.addEventListener('click', async () => {
+    if (!loc.label.trim()){ toast('Add a location first', 'err'); return; }
+    rescanBtn.disabled = true; rescanBtn.textContent = '\u2026';
+    await seoScanOne(c, k, loc);
+    save(); renderSeoKeywords();
+  });
+  const delBtn = document.createElement('button');
+  delBtn.className = 'btn btn-sm'; delBtn.textContent = '\u00d7'; delBtn.title = 'Remove this location';
+  delBtn.addEventListener('click', () => {
+    k.locations = k.locations.filter(l => l.id !== loc.id);
+    save(); renderSeoKeywords();
+  });
+  btns.appendChild(rescanBtn); btns.appendChild(delBtn);
+
+  [labelInput, regionSel, rankBox, deltaBox, meta, rankInput, btns].forEach(el => row.appendChild(el));
+  return row;
+}
+
+function renderSeoKeywords(){
+  const c = activeSeoClient(); if (!c) return;
+  const wrap = $('seoKeywordList');
+  wrap.innerHTML = '';
+  $('seoKeywordEmpty').style.display = c.keywords.length ? 'none' : '';
+  c.keywords.forEach(k => {
+    const row = document.createElement('div');
+    row.className = 'seo-kw-row' + (k._open ? ' open' : '');
+    const head = document.createElement('div');
+    head.className = 'seo-kw-head';
+    const best = seoKeywordBestRank(k);
+    head.innerHTML = '<span class="seo-kw-caret"></span>' +
+      '<span class="seo-kw-text">' + esc(k.text) + '</span>' +
+      '<span class="seo-kw-locs-count">' + k.locations.length + ' loc' + (k.locations.length === 1 ? '' : 's') + '</span>' +
+      seoRankPill(best) +
+      '<button class="seo-kw-del" title="Delete keyword">\u00d7</button>';
+    head.addEventListener('click', e => {
+      if (e.target.closest('.seo-kw-del')) return;
+      k._open = !k._open; renderSeoKeywords();
+    });
+    head.querySelector('.seo-kw-del').addEventListener('click', e => {
+      e.stopPropagation();
+      if (!confirm('Delete \u201c' + k.text + '\u201d and all of its tracked locations?')) return;
+      c.keywords = c.keywords.filter(w => w.id !== k.id);
+      save(); renderSeoKeywords();
+    });
+    row.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'seo-kw-body';
+    k.locations.forEach(loc => body.appendChild(seoLocationRow(c, k, loc)));
+    const addBtn = document.createElement('button');
+    addBtn.className = 'seo-loc-add-btn';
+    addBtn.textContent = '+ Add a location for this keyword';
+    addBtn.addEventListener('click', () => {
+      k.locations.push(blankSeoLocation('', 0));
+      k._open = true;
+      save(); renderSeoKeywords();
+    });
+    body.appendChild(addBtn);
+    row.appendChild(body);
+    wrap.appendChild(row);
+  });
+}
+
+$('seoAddKeywordBtn').addEventListener('click', async () => {
+  const c = activeSeoClient(); if (!c) return;
+  const text = $('seoNewKeyword').value.trim();
+  if (!text){ toast('Type a keyword first', 'err'); return; }
+  const locLabel = $('seoNewLocation').value.trim();
+  const regionIdx = +$('seoNewRegion').value || 0;
+  let k = c.keywords.find(x => x.text.toLowerCase() === text.toLowerCase());
+  if (!k){ k = {id:uid(), text, locations:[]}; c.keywords.push(k); }
+  let newLoc = null;
+  if (locLabel && !k.locations.some(l => l.label.toLowerCase() === locLabel.toLowerCase())){
+    newLoc = blankSeoLocation(locLabel, regionIdx);
+    k.locations.push(newLoc);
+  }
+  k._open = true;
+  $('seoNewKeyword').value = ''; $('seoNewLocation').value = '';
+  save(); renderSeoKeywords();
+  toast('Keyword added');
+  if (newLoc) await seoScanAndRender(c, [{k, loc:newLoc}]);
+});
+$('seoNewKeyword').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('seoAddKeywordBtn').click(); } });
+$('seoNewLocation').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('seoAddKeywordBtn').click(); } });
+
+$('seoScanAllBtn').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  const pairs = [];
+  c.keywords.forEach(k => k.locations.forEach(loc => pairs.push({k, loc})));
+  seoScanAndRender(c, pairs);
+});
+
+/* ---------- bulk import ---------- */
+$('seoBulkImportBtn').addEventListener('click', () => {
+  if (!activeSeoClient()){ toast('Select a client first', 'err'); return; }
+  $('seoBulkText').value = ''; $('seoBulkDefaultLocation').value = '';
+  $('seoBulkBackdrop').classList.add('on');
+  setTimeout(() => $('seoBulkText').focus(), 40);
+});
+$('seoBulkCancel').addEventListener('click', () => $('seoBulkBackdrop').classList.remove('on'));
+$('seoBulkBackdrop').addEventListener('click', e => { if (e.target === $('seoBulkBackdrop')) $('seoBulkBackdrop').classList.remove('on'); });
+$('seoBulkOk').addEventListener('click', async () => {
+  const c = activeSeoClient(); if (!c) return;
+  const defaultLoc = $('seoBulkDefaultLocation').value.trim();
+  const defaultRegion = +$('seoBulkDefaultRegion').value || 0;
+  const lines = $('seoBulkText').value.split('\n').map(s => s.trim()).filter(Boolean);
+  if (!lines.length){ toast('Paste at least one keyword', 'err'); return; }
+  const pairs = [];
+  lines.forEach(line => {
+    let text = line, locPart = '';
+    const pipeIdx = line.indexOf('|');
+    if (pipeIdx >= 0){ text = line.slice(0, pipeIdx).trim(); locPart = line.slice(pipeIdx + 1).trim(); }
+    if (!text) return;
+    let k = c.keywords.find(x => x.text.toLowerCase() === text.toLowerCase());
+    if (!k){ k = {id:uid(), text, locations:[]}; c.keywords.push(k); }
+    const locLabels = locPart ? locPart.split(';').map(s => s.trim()).filter(Boolean) : (defaultLoc ? [defaultLoc] : []);
+    locLabels.forEach(lbl => {
+      if (!k.locations.some(l => l.label.toLowerCase() === lbl.toLowerCase())){
+        const loc = blankSeoLocation(lbl, defaultRegion);
+        k.locations.push(loc);
+        pairs.push({k, loc});
+      }
+    });
+  });
+  $('seoBulkBackdrop').classList.remove('on');
+  save(); renderSeoKeywords();
+  toast(pairs.length + ' new keyword location(s) queued \u2014 scanning now\u2026');
+  if (pairs.length) await seoScanAndRender(c, pairs);
+});
+
+/* ---------- export to Excel (SheetJS, actual .xlsx — not just CSV) ---------- */
+function seoBuildRows(clients){
+  const rows = [];
+  clients.forEach(c => {
+    if (!c.keywords.length){
+      rows.push({Client:c.name, Keyword:'', Location:'', Region:'', Rank:'', 'Previous Rank':'', 'Last Checked':'', 'Matched Page':'', 'Source Link':'', Manual:''});
+      return;
+    }
+    c.keywords.forEach(k => {
+      if (!k.locations.length){
+        rows.push({Client:c.name, Keyword:k.text, Location:'', Region:'', Rank:'', 'Previous Rank':'', 'Last Checked':'', 'Matched Page':'', 'Source Link':'', Manual:''});
+        return;
+      }
+      k.locations.forEach(loc => {
+        const region = REGIONS[loc.regionIdx || 0] || {};
+        rows.push({
+          Client: c.name, Keyword: k.text, Location: loc.label || '', Region: region.label || '',
+          Rank: loc.rank == null ? '' : (loc.rank === 0 ? 'Not in top results' : loc.rank),
+          'Previous Rank': loc.prevRank == null ? '' : (loc.prevRank === 0 ? 'Not in top results' : loc.prevRank),
+          'Last Checked': loc.checkedAt ? new Date(loc.checkedAt).toLocaleString() : '',
+          'Matched Page': loc.matchedDomain || '', 'Source Link': loc.sourceUrl || '',
+          Manual: loc.manual ? 'Yes' : ''
+        });
+      });
+    });
+  });
+  return rows;
+}
+function seoExportXlsx(clients, filename){
+  if (typeof XLSX === 'undefined'){ toast('Export library failed to load \u2014 check your connection', 'err'); return; }
+  const rows = seoBuildRows(clients);
+  if (!rows.length){ toast('Nothing to export yet', 'err'); return; }
+  const ws = XLSX.utils.json_to_sheet(rows);
+  ws['!cols'] = [{wch:22},{wch:30},{wch:18},{wch:20},{wch:9},{wch:13},{wch:19},{wch:24},{wch:44},{wch:8}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Keyword Rankings');
+  XLSX.writeFile(wb, filename);
+  toast('Exported ' + filename);
+}
+$('seoExportClientBtn').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  seoExportXlsx([c], (c.name || 'client').replace(/[^a-z0-9]+/gi, '_') + '_rankings.xlsx');
+});
+$('seoExportAllBtn').addEventListener('click', () => {
+  if (!state.seoClients.length){ toast('No SEO clients yet', 'err'); return; }
+  seoExportXlsx(state.seoClients, 'seo_clients_rankings.xlsx');
+});
+
+/* ---------- dashboard / keywords tab switch ---------- */
+document.querySelectorAll('#seoStage .mode').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#seoStage .mode').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    const v = btn.dataset.seoview;
+    $('seoview-dashboard').classList.toggle('on', v === 'dashboard');
+    $('seoview-keywords').classList.toggle('on', v === 'keywords');
+  });
+});
+
+/* ---------- top-level render + module switch ---------- */
+function renderSeoAll(){
+  ensureSeoState();
+  renderSeoTree();
+  const c = activeSeoClient();
+  $('seoEmptyState').style.display = c ? 'none' : '';
+  $('seoDashboardView').style.display = c ? 'block' : 'none';
+  $('seoKeywordsView').style.display = c ? 'block' : 'none';
+  renderSeoCrumbs();
+  if (!c) return;
+  seoLoadDashboard();
+  renderSeoKeywords();
+  $('seoProviderHint').style.display = providerReady() ? 'none' : 'block';
+}
+
+function seoSetModule(m){
+  state.seoModule = m; save();
+  document.querySelectorAll('.mod-btn').forEach(b => b.classList.toggle('on', b.dataset.module === m));
+  $('gbpRail').style.display = m === 'gbp' ? '' : 'none';
+  $('gbpStage').style.display = m === 'gbp' ? '' : 'none';
+  $('seoRail').style.display = m === 'seo' ? '' : 'none';
+  $('seoStage').style.display = m === 'seo' ? '' : 'none';
+  if (m === 'seo'){
+    if (window.EDGE_LOGO){ const l = $('seoBrandLogo'); if (l) l.src = window.EDGE_LOGO; }
+    if (state.seoClients.length && !activeSeoClient()) state.activeSeoClientId = state.seoClients[0].id;
+    renderSeoAll();
+  } else if (typeof map !== 'undefined' && map){
+    setTimeout(() => { try{ map.invalidateSize(); cmpMap.invalidateSize(); }catch(e){} }, 60);
+  }
+}
+$('modBtnGbp').addEventListener('click', () => seoSetModule('gbp'));
+$('modBtnSeo').addEventListener('click', () => seoSetModule('seo'));
+
+fillRegions($('seoNewRegion'));
+fillRegions($('seoBulkDefaultRegion'));
+
+// Never take over the public embed view — it uses the same #appShell.
+if (typeof EMBED_ID === 'undefined' || !EMBED_ID){
+  seoSetModule(state.seoModule === 'seo' ? 'seo' : 'gbp');
+}
+
+})();
 </script>
 </body>
 </html>
