@@ -687,6 +687,35 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-profile-meta{font-size:12px; color:var(--ink-3); margin-top:5px; display:flex; gap:14px; flex-wrap:wrap;}
 .seo-profile-meta a{color:var(--ink-2);}
 
+.seo-dash-head-row{display:flex; align-items:flex-start; gap:12px; margin-bottom:18px;}
+.seo-dash-head-row .seo-profile-head{flex:1; margin-bottom:0;}
+.seo-dash-edit-btn{margin-top:2px;}
+.seo-avatar-img{object-fit:cover; box-shadow:0 8px 18px -8px rgba(20,28,36,.35);}
+
+.seo-ext-links{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:26px;}
+.seo-ext-btn{
+  display:inline-flex; align-items:center; gap:9px; padding:11px 16px; border-radius:var(--r-md);
+  border:1.5px solid var(--line); background:var(--card); box-shadow:var(--sh-1);
+  font-family:var(--ui); font-size:12.5px; font-weight:600; color:var(--ink); text-decoration:none;
+  transition:all .18s var(--ease); cursor:pointer;
+}
+.seo-ext-btn svg:first-child{width:16px; height:16px; stroke:var(--brand-deep); flex:none;}
+.seo-ext-btn:hover{border-color:var(--brand); box-shadow:var(--sh-2); transform:translateY(-1px);}
+.seo-ext-btn .seo-ext-go{width:12px; height:12px; stroke:var(--ink-3); flex:none; margin-left:2px;}
+.seo-ext-btn.disabled{opacity:.45; cursor:default; box-shadow:none;}
+.seo-ext-btn.disabled:hover{transform:none; border-color:var(--line);}
+
+.seo-view-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px 24px;}
+.seo-view-field{min-width:0;}
+.seo-view-label{display:block; font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); font-weight:700; margin-bottom:6px;}
+.seo-view-value{font-size:14px; color:var(--ink); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block;}
+.seo-view-value a{color:var(--brand-deep);}
+.seo-view-empty{color:var(--ink-3); font-weight:500;}
+.seo-view-notes:empty{display:none;}
+.seo-view-notes{margin-top:22px; padding-top:20px; border-top:1px solid var(--line-2);}
+.seo-view-notes-label{font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); font-weight:700; margin-bottom:8px;}
+.seo-view-notes-text{font-size:13px; color:var(--ink-2); line-height:1.7;}
+
 .seo-autoscan-card{padding:20px 22px;}
 .seo-autoscan-toggle{align-items:flex-start; gap:12px;}
 .seo-autoscan-toggle span{line-height:1.6;}
@@ -771,38 +800,50 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-scan-bar{flex:1; height:6px; border-radius:4px; background:#f3d9bf; overflow:hidden;}
 .seo-scan-bar i{display:block; height:100%; width:0%; background:var(--brand); transition:width .2s var(--ease);}
 
-.seo-bulk-bar{display:flex; align-items:center; gap:16px; padding:12px 18px; border-bottom:1px solid var(--line-2); background:var(--card-2); font-size:12px; flex-wrap:wrap;}
-.seo-bulk-bar label{display:flex; align-items:center; gap:7px; cursor:pointer; color:var(--ink-2); font-weight:600; white-space:nowrap;}
-.seo-bulk-bar input[type=checkbox]{width:15px; height:15px; accent-color:var(--brand); cursor:pointer; flex:none;}
+.seo-bulk-bar{display:flex; align-items:center; gap:16px; padding:13px 20px; border-bottom:1px solid var(--line-2); background:var(--card-2); font-size:12px; flex-wrap:wrap;}
+.seo-edit-btn{
+  display:inline-flex; align-items:center; gap:7px; flex:none; cursor:pointer; user-select:none;
+  border:1.5px solid var(--line); background:var(--card); border-radius:20px; padding:7px 14px 7px 12px;
+  font-family:var(--ui); font-size:12px; font-weight:700; color:var(--ink-2);
+  transition:all .18s var(--ease);
+}
+.seo-edit-btn svg{width:13px; height:13px; stroke:currentColor; flex:none;}
+.seo-edit-btn:hover{border-color:#cdd7de; color:var(--ink);}
+.seo-edit-btn.on{background:var(--brand); border-color:var(--brand); color:#fff;}
+.seo-bulk-edit-controls{display:flex; align-items:center; gap:16px; flex-wrap:wrap; flex:1; animation:rise .18s var(--ease);}
+.seo-bulk-edit-controls label{display:flex; align-items:center; gap:7px; cursor:pointer; color:var(--ink-2); font-weight:600; white-space:nowrap;}
+.seo-bulk-edit-controls input[type=checkbox]{width:15px; height:15px; accent-color:var(--brand); cursor:pointer; flex:none;}
 .seo-bulk-link{border:none; background:none; color:var(--ink-2); text-decoration:underline; text-decoration-color:var(--line); cursor:pointer; font-size:12px; padding:0; font-weight:600; white-space:nowrap;}
 .seo-bulk-link:hover{color:var(--brand-deep); text-decoration-color:var(--brand);}
 .seo-bulk-spacer{flex:1; min-width:8px;}
 .seo-bulk-count{color:var(--ink-3); font-weight:600; white-space:nowrap;}
-.seo-kw-check{width:15px; height:15px; accent-color:var(--brand); cursor:pointer; flex:none;}
+.seo-kw-check{width:15px; height:15px; accent-color:var(--brand); cursor:pointer; flex:none; display:none;}
+#seoKeywordList.seo-edit-mode .seo-kw-check{display:inline-block;}
 .seo-kw-empty{padding:44px 24px; text-align:center; color:var(--ink-3); font-size:13px; line-height:1.7;}
 
 /* ---- location-grouped keyword cards ---- */
 .seo-lg-card{
-  background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r-xl);
   margin-bottom:12px; overflow:hidden; box-shadow:var(--sh-1);
   transition:box-shadow .2s var(--ease), border-color .2s var(--ease);
 }
 .seo-lg-card:last-child{margin-bottom:0;}
-.seo-lg-card.open{box-shadow:var(--sh-2); border-color:#dbe3e9;}
+.seo-lg-card.open{box-shadow:var(--sh-3); border-color:#dbe3e9;}
 .seo-lg-card-warn{border-color:#f0c49b; background:linear-gradient(180deg,var(--brand-wash) 0%, var(--card) 90px);}
-.seo-lg-head{display:flex; align-items:center; gap:12px; padding:16px 20px; cursor:pointer; user-select:none;}
-.seo-lg-head:hover{background:rgba(0,0,0,.015);}
+.seo-lg-head{display:flex; align-items:center; gap:12px; padding:17px 22px; cursor:pointer; user-select:none;}
+.seo-lg-head:hover{background:rgba(0,0,0,.018);}
 .seo-lg-caret{width:13px; height:13px; flex:none; stroke:var(--ink-3); transition:transform .2s var(--ease);}
 .seo-lg-card.open .seo-lg-caret{transform:rotate(90deg);}
 .seo-lg-pin{width:16px; height:16px; flex:none; stroke:var(--brand-deep);}
 .seo-lg-label{flex:1; font-family:var(--display); font-weight:600; font-size:15px; color:var(--ink); letter-spacing:-.01em; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .seo-lg-count{font-size:10.5px; font-weight:700; color:var(--ink-3); background:var(--card-2); border:1px solid var(--line); border-radius:20px; padding:4px 11px; flex:none;}
 .seo-lg-count-warn{color:var(--brand-deep); background:var(--brand-wash); border-color:#f0c49b;}
-.seo-lg-body{display:none; padding:2px 20px 14px;}
+.seo-lg-body{display:none; padding:2px 22px 16px;}
 .seo-lg-card.open .seo-lg-body{display:block; animation:rise .22s var(--ease);}
 
-.seo-lg-row{padding:13px 0; border-top:1px solid var(--line-2); display:flex; flex-direction:column; gap:7px;}
-.seo-lg-row:first-child{border-top:none; padding-top:8px;}
+.seo-lg-row{padding:13px 10px; margin:0 -10px; border-top:1px solid var(--line-2); display:flex; flex-direction:column; gap:7px; border-radius:9px; transition:background .15s var(--ease);}
+.seo-lg-row:hover{background:var(--card-2);}
+.seo-lg-row:first-child{border-top:none; padding-top:9px;}
 .seo-lg-top{display:flex; align-items:center; gap:12px;}
 .seo-lg-text{flex:1; font-weight:600; font-size:13.5px; color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .seo-kw-source{width:28px; height:28px; flex:none; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; color:var(--ink-3); transition:all .12s var(--ease);}
@@ -857,6 +898,8 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
   .seo-lg-quick-loc{width:100%; order:1;}
   .seo-loc-adv-coords{grid-template-columns:1fr 1fr;}
   .seo-loc-adv-label{grid-template-columns:1fr;}
+  .seo-view-grid{grid-template-columns:1fr 1fr;}
+  .seo-dash-head-row{flex-wrap:wrap;}
 }
 .auth-screen{
   position:fixed; inset:0; z-index:9000; display:none; place-items:center;
@@ -1648,7 +1691,13 @@ body.embed-mode #mapCard{box-shadow:none;}
         </div>
 
         <div id="seoDashboardView" style="display:none">
-          <div class="seo-profile-head" id="seoProfileHead"></div>
+          <div class="seo-dash-head-row">
+            <div class="seo-profile-head" id="seoProfileHead"></div>
+            <button type="button" class="seo-edit-btn seo-dash-edit-btn" id="seoDashEditBtn" title="Edit this client's details">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+              <span id="seoDashEditLabel">Edit</span>
+            </button>
+          </div>
           <div class="seo-stats-grid" id="seoStatsGrid"></div>
 
           <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Automatic scans</h2><div class="rule"></div></div>
@@ -1690,81 +1739,100 @@ body.embed-mode #mapCard{box-shadow:none;}
             <div class="hint" style="margin-top:12px">This schedule only fires while GBP Reporter is open in a browser tab somewhere. It checks once a minute and catches up on the next visit if a run was missed.</div>
           </div>
 
-          <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg>Client basics</h2><div class="rule"></div></div>
-          <div class="card">
-            <div class="g2">
-              <div class="f">
-                <label for="seoName">Client name</label>
-                <input id="seoName" type="text" placeholder="Advance Construction" autocomplete="off"/>
-              </div>
-              <div class="f">
-                <label for="seoStatus">Status</label>
-                <select id="seoStatus">
-                  <option>Active</option><option>Paused</option><option>Onboarding</option>
-                  <option>At risk</option><option>Cancelled</option>
-                </select>
-              </div>
-            </div>
-            <div class="g2">
-              <div class="f">
-                <label for="seoLead">Project lead</label>
-                <input id="seoLead" type="text" placeholder="Robert" autocomplete="off"/>
-              </div>
-              <div class="f">
-                <label for="seoCms">CMS</label>
-                <input id="seoCms" type="text" placeholder="WordPress" autocomplete="off"/>
-              </div>
+          <!-- ============ VIEW MODE — external links + read-only summary ============ -->
+          <div id="seoDashView">
+            <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>Quick links</h2><div class="rule"></div></div>
+            <div class="seo-ext-links" id="seoExtLinks"></div>
+
+            <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg>Client details</h2><div class="rule"></div></div>
+            <div class="card">
+              <div class="seo-view-grid" id="seoViewGrid"></div>
+              <div class="seo-view-notes" id="seoViewNotes"></div>
             </div>
           </div>
 
-          <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Tracking</h2><div class="rule"></div></div>
-          <div class="card">
-            <div class="g2">
-              <div class="f">
-                <label for="seoWebsite">Website <span class="opt">used to detect this client's rank in results</span></label>
-                <input id="seoWebsite" type="text" placeholder="advanceconstruction.ca" autocomplete="off"/>
+          <!-- ============ EDIT MODE — the actual editable form ============ -->
+          <div id="seoDashEdit" style="display:none">
+            <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg>Client basics</h2><div class="rule"></div></div>
+            <div class="card">
+              <div class="g2">
+                <div class="f">
+                  <label for="seoName">Client name</label>
+                  <input id="seoName" type="text" placeholder="Advance Construction" autocomplete="off"/>
+                </div>
+                <div class="f">
+                  <label for="seoStatus">Status</label>
+                  <select id="seoStatus">
+                    <option>Active</option><option>Paused</option><option>Onboarding</option>
+                    <option>At risk</option><option>Cancelled</option>
+                  </select>
+                </div>
+              </div>
+              <div class="g2">
+                <div class="f">
+                  <label for="seoLead">Project lead</label>
+                  <input id="seoLead" type="text" placeholder="Robert" autocomplete="off"/>
+                </div>
+                <div class="f">
+                  <label for="seoCms">CMS</label>
+                  <input id="seoCms" type="text" placeholder="WordPress" autocomplete="off"/>
+                </div>
               </div>
               <div class="f">
-                <label for="seoHours">Allocated hours</label>
-                <input id="seoHours" type="text" placeholder="5 Hours" autocomplete="off"/>
+                <label for="seoLogoUrl">Logo URL <span class="opt">optional — shown instead of the initials avatar</span></label>
+                <input id="seoLogoUrl" type="text" placeholder="https://…/logo.png" autocomplete="off"/>
               </div>
             </div>
-            <div class="g2">
-              <div class="f">
-                <label for="seoProgress">Monthly progress</label>
-                <input id="seoProgress" type="text" placeholder="On track" autocomplete="off"/>
-              </div>
-              <div class="f">
-                <label for="seoLastCall">Last monthly call</label>
-                <input id="seoLastCall" type="date"/>
-              </div>
-            </div>
-          </div>
 
-          <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.36-1.36"/></svg>Links &amp; notes</h2><div class="rule"></div></div>
-          <div class="card">
-            <div class="g2">
-              <div class="f">
-                <label for="seoBasecamp">Basecamp link</label>
-                <input id="seoBasecamp" type="text" placeholder="https://3.basecamp.com/…" autocomplete="off"/>
+            <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>Tracking</h2><div class="rule"></div></div>
+            <div class="card">
+              <div class="g2">
+                <div class="f">
+                  <label for="seoWebsite">Website <span class="opt">used to detect this client's rank in results</span></label>
+                  <input id="seoWebsite" type="text" placeholder="advanceconstruction.ca" autocomplete="off"/>
+                </div>
+                <div class="f">
+                  <label for="seoHours">Allocated hours</label>
+                  <input id="seoHours" type="text" placeholder="5 Hours" autocomplete="off"/>
+                </div>
               </div>
-              <div class="f">
-                <label for="seoReportLink">Report / rank-tracker link <span class="opt">e.g. Agency Analytics</span></label>
-                <input id="seoReportLink" type="text" placeholder="https://…/rank-tracker/keywords" autocomplete="off"/>
+              <div class="g2">
+                <div class="f">
+                  <label for="seoProgress">Monthly progress</label>
+                  <input id="seoProgress" type="text" placeholder="On track" autocomplete="off"/>
+                </div>
+                <div class="f">
+                  <label for="seoLastCall">Last monthly call</label>
+                  <input id="seoLastCall" type="date"/>
+                </div>
               </div>
             </div>
-            <div class="f">
-              <label for="seoNotes">Notes</label>
-              <textarea id="seoNotes" rows="4" placeholder="Anything worth remembering about this client…"></textarea>
-            </div>
-          </div>
 
-          <div class="seo-danger-zone">
-            <div>
-              <div class="seo-danger-title">Delete this client</div>
-              <div class="seo-danger-sub">Removes all of their keywords, locations and scan history. This can't be undone.</div>
+            <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11.5 4.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.36-1.36"/></svg>Links &amp; notes</h2><div class="rule"></div></div>
+            <div class="card">
+              <div class="g2">
+                <div class="f">
+                  <label for="seoBasecamp">Basecamp link</label>
+                  <input id="seoBasecamp" type="text" placeholder="https://3.basecamp.com/…" autocomplete="off"/>
+                </div>
+                <div class="f">
+                  <label for="seoReportLink">Report / rank-tracker link <span class="opt">e.g. Agency Analytics</span></label>
+                  <input id="seoReportLink" type="text" placeholder="https://…/rank-tracker/keywords" autocomplete="off"/>
+                </div>
+              </div>
+              <div class="f">
+                <label for="seoNotes">Notes</label>
+                <textarea id="seoNotes" rows="4" placeholder="Anything worth remembering about this client…"></textarea>
+              </div>
             </div>
-            <button class="btn" id="seoDeleteClientBtn" style="color:var(--alert)">Delete client</button>
+
+            <div class="seo-danger-zone">
+              <div>
+                <div class="seo-danger-title">Delete this client</div>
+                <div class="seo-danger-sub">Removes all of their keywords, locations and scan history. This can't be undone.</div>
+              </div>
+              <button class="btn" id="seoDeleteClientBtn" style="color:var(--alert)">Delete client</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1804,13 +1872,19 @@ body.embed-mode #mapCard{box-shadow:none;}
 
           <div class="tbl-card">
             <div class="seo-bulk-bar" id="seoBulkBar">
-              <label><input type="checkbox" id="seoSelectAllCheck"/> Select all</label>
-              <button type="button" class="seo-bulk-link" id="seoSelectNoLocBtn">Select keywords without a location</button>
-              <div class="seo-bulk-spacer"></div>
-              <span class="seo-bulk-count" id="seoBulkCountLabel">0 selected</span>
-              <button class="btn btn-sm" id="seoDeleteSelBtn" disabled style="color:var(--alert)">Delete selected</button>
-              <button class="btn btn-sm" id="seoRemoveLocBtn" disabled>Remove location…</button>
-              <button class="btn btn-sm btn-dark" id="seoApplyLocBtn" disabled>Apply location to selected</button>
+              <button type="button" class="seo-edit-btn" id="seoEditModeBtn" title="Select keywords for bulk actions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                <span id="seoEditModeLabel">Edit</span>
+              </button>
+              <div class="seo-bulk-edit-controls" id="seoBulkEditControls" style="display:none">
+                <label><input type="checkbox" id="seoSelectAllCheck"/> Select all</label>
+                <button type="button" class="seo-bulk-link" id="seoSelectNoLocBtn">Select keywords without a location</button>
+                <div class="seo-bulk-spacer"></div>
+                <span class="seo-bulk-count" id="seoBulkCountLabel">0 selected</span>
+                <button class="btn btn-sm" id="seoDeleteSelBtn" disabled style="color:var(--alert)">Delete selected</button>
+                <button class="btn btn-sm" id="seoRemoveLocBtn" disabled>Remove location…</button>
+                <button class="btn btn-sm btn-dark" id="seoApplyLocBtn" disabled>Apply location to selected</button>
+              </div>
             </div>
             <div id="seoKeywordList"></div>
             <div class="seo-kw-empty" id="seoKeywordEmpty" style="display:none">
@@ -5531,7 +5605,7 @@ function blankSeoClient(name){
   return {
     id: uid(), name: name || 'New client', projectLead:'', cms:'', status:'Active',
     allocatedHours:'', monthlyProgress:'', lastMonthlyCall:'', website:'', basecampLink:'',
-    reportLink:'', notes:'', activeKeywordId:null, locationCache:{}, keywords:[], autoScan: blankAutoScan()
+    reportLink:'', notes:'', logoUrl:'', activeKeywordId:null, locationCache:{}, keywords:[], autoScan: blankAutoScan()
   };
 }
 function blankSeoLocation(label, regionIdx){
@@ -5554,7 +5628,7 @@ function migrateSeoClient(c){
       if (typeof l.manual !== 'boolean') l.manual = false;
     });
   });
-  ['projectLead','cms','allocatedHours','monthlyProgress','lastMonthlyCall','website','basecampLink','reportLink','notes'].forEach(k => {
+  ['projectLead','cms','allocatedHours','monthlyProgress','lastMonthlyCall','website','basecampLink','reportLink','notes','logoUrl'].forEach(k => {
     if (typeof c[k] !== 'string') c[k] = c[k] || '';
   });
   if (!c.autoScan || typeof c.autoScan !== 'object') c.autoScan = blankAutoScan();
@@ -5816,6 +5890,26 @@ function seoInitials(name){
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();
 }
+function seoBuildAvatar(c){
+  const hasLogo = c.logoUrl && c.logoUrl.trim();
+  if (!hasLogo){
+    const div = document.createElement('div');
+    div.className = 'seo-avatar';
+    div.textContent = seoInitials(c.name);
+    return div;
+  }
+  const img = document.createElement('img');
+  img.className = 'seo-avatar seo-avatar-img';
+  img.src = c.logoUrl.trim();
+  img.alt = (c.name || 'Client') + ' logo';
+  img.onerror = () => {
+    const div = document.createElement('div');
+    div.className = 'seo-avatar';
+    div.textContent = seoInitials(c.name);
+    img.replaceWith(div);
+  };
+  return img;
+}
 function renderSeoProfileHead(c){
   const el = $('seoProfileHead');
   const meta = [];
@@ -5823,7 +5917,6 @@ function renderSeoProfileHead(c){
   if (c.projectLead) meta.push('Lead: ' + esc(c.projectLead));
   if (c.cms) meta.push(esc(c.cms));
   el.innerHTML =
-    '<div class="seo-avatar">' + esc(seoInitials(c.name)) + '</div>' +
     '<div class="seo-profile-info">' +
       '<div class="seo-profile-name">' + esc(c.name || 'Untitled') +
         '<span class="seo-profile-status ' + seoStatusDotClass(c.status) + '">' + esc(c.status || 'Active') + '</span>' +
@@ -5831,6 +5924,7 @@ function renderSeoProfileHead(c){
       '</div>' +
       (meta.length ? '<div class="seo-profile-meta">' + meta.join('<span>\u00b7</span>') + '</div>' : '') +
     '</div>';
+  el.prepend(seoBuildAvatar(c));
 }
 
 function renderSeoCrumbs(){
@@ -5975,13 +6069,72 @@ async function seoRunDueSchedules(){
 setInterval(seoRunDueSchedules, 60 * 1000);
 setTimeout(seoRunDueSchedules, 10000);
 
+const SEO_CLIENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1RxJIePQoMlcjytGTWa8MPiv4uGoSYthcnV8siOKScmc/edit?usp=sharing';
+
+function seoExtLinkBtn(href, label, iconSvg, disabledReason){
+  const enabled = href && href.trim();
+  const tag = enabled ? 'a' : 'span';
+  const attrs = enabled ? ' href="' + esc(href.trim()) + '" target="_blank" rel="noopener"' : '';
+  const title = enabled ? 'Opens in a new tab' : (disabledReason || 'Not set yet \u2014 add it in Edit');
+  return '<' + tag + ' class="seo-ext-btn' + (enabled ? '' : ' disabled') + '"' + attrs + ' title="' + esc(title) + '">' +
+    iconSvg + '<span>' + esc(label) + '</span>' +
+    (enabled ? '<svg class="seo-ext-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>' : '') +
+    '</' + tag + '>';
+}
+function renderSeoDashboardExtLinks(c){
+  const ICON_CHART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>';
+  const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M9 15l2 2 4-4"/></svg>';
+  const ICON_SHEET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8M8 9h1"/></svg>';
+  $('seoExtLinks').innerHTML =
+    seoExtLinkBtn(c.reportLink, 'Agency Analytics', ICON_CHART, 'No report link set yet \u2014 add it in Edit') +
+    seoExtLinkBtn(c.basecampLink, 'Basecamp', ICON_CHECK, 'No Basecamp link set yet \u2014 add it in Edit') +
+    seoExtLinkBtn(SEO_CLIENT_SHEET_URL, 'SEO Client Sheet', ICON_SHEET);
+}
+function seoViewField(label, value){
+  return '<div class="seo-view-field"><span class="seo-view-label">' + esc(label) + '</span><span class="seo-view-value">' + value + '</span></div>';
+}
+function renderSeoDashboardView(c){
+  renderSeoDashboardExtLinks(c);
+  const na = '<span class="seo-view-empty">\u2014</span>';
+  const websiteHtml = c.website
+    ? '<a href="https://' + esc(c.website.replace(/^https?:\/\//, '')) + '" target="_blank" rel="noopener">' + esc(c.website) + '</a>'
+    : na;
+  const lastCallHtml = c.lastMonthlyCall
+    ? esc(new Date(c.lastMonthlyCall + 'T00:00:00').toLocaleDateString(undefined, {year:'numeric', month:'long', day:'numeric'}))
+    : na;
+  $('seoViewGrid').innerHTML =
+    seoViewField('Project lead', c.projectLead ? esc(c.projectLead) : na) +
+    seoViewField('CMS', c.cms ? esc(c.cms) : na) +
+    seoViewField('Website', websiteHtml) +
+    seoViewField('Allocated hours', c.allocatedHours ? esc(c.allocatedHours) : na) +
+    seoViewField('Monthly progress', c.monthlyProgress ? esc(c.monthlyProgress) : na) +
+    seoViewField('Last monthly call', lastCallHtml);
+  $('seoViewNotes').innerHTML = c.notes
+    ? '<div class="seo-view-notes-label">Notes</div><div class="seo-view-notes-text">' + esc(c.notes).replace(/\n/g, '<br>') + '</div>'
+    : '';
+}
+
+let seoDashEditMode = false;
+let seoDashEditModeForClientId = null;
+function seoSetDashEditMode(on){
+  seoDashEditMode = on;
+  $('seoDashView').style.display = on ? 'none' : 'block';
+  $('seoDashEdit').style.display = on ? 'block' : 'none';
+  $('seoDashEditBtn').classList.toggle('on', on);
+  $('seoDashEditLabel').textContent = on ? 'Done' : 'Edit';
+}
+$('seoDashEditBtn').addEventListener('click', () => seoSetDashEditMode(!seoDashEditMode));
+
 function seoLoadDashboard(){
   const c = activeSeoClient(); if (!c) return;
+  if (seoDashEditModeForClientId !== c.id){ seoDashEditModeForClientId = c.id; seoSetDashEditMode(false); }
   renderSeoProfileHead(c);
+  renderSeoDashboardView(c);
   $('seoName').value = c.name || '';
   $('seoStatus').value = c.status || 'Active';
   $('seoLead').value = c.projectLead || '';
   $('seoCms').value = c.cms || '';
+  $('seoLogoUrl').value = c.logoUrl || '';
   $('seoWebsite').value = c.website || '';
   $('seoHours').value = c.allocatedHours || '';
   $('seoProgress').value = c.monthlyProgress || '';
@@ -5993,7 +6146,7 @@ function seoLoadDashboard(){
 }
 const SEO_FIELD_MAP = [
   ['seoName','name','input'], ['seoStatus','status','change'], ['seoLead','projectLead','input'],
-  ['seoCms','cms','input'], ['seoWebsite','website','input'], ['seoHours','allocatedHours','input'],
+  ['seoCms','cms','input'], ['seoLogoUrl','logoUrl','input'], ['seoWebsite','website','input'], ['seoHours','allocatedHours','input'],
   ['seoProgress','monthlyProgress','input'], ['seoLastCall','lastMonthlyCall','change'],
   ['seoBasecamp','basecampLink','input'], ['seoReportLink','reportLink','input'], ['seoNotes','notes','input']
 ];
@@ -6003,7 +6156,8 @@ SEO_FIELD_MAP.forEach(([id, key, evt]) => {
     c[key] = $(id).value;
     if (key === 'name'){ renderSeoTree(); renderSeoCrumbs(); }
     if (key === 'status') renderSeoCrumbs();
-    if (['name','status','website','projectLead','cms'].includes(key)) renderSeoProfileHead(c);
+    if (['name','status','website','projectLead','cms','logoUrl'].includes(key)) renderSeoProfileHead(c);
+    if (['website','projectLead','cms','allocatedHours','monthlyProgress','lastMonthlyCall','basecampLink','reportLink','notes'].includes(key)) renderSeoDashboardView(c);
     save();
   });
 });
@@ -6215,6 +6369,7 @@ let seoSelectedKwIds = new Set();
 let seoSelectedForClientId = null;
 let seoOpenLocGroups = new Set();
 let seoOpenLocGroupsForClientId = null;
+let seoEditMode = false;
 
 function seoBuildLocationGroups(c){
   const groups = new Map(); // key -> {label, entries:[{k, loc}]}
@@ -6243,10 +6398,17 @@ function seoGroupFlaggedCount(entries){
 
 function renderSeoKeywords(){
   const c = activeSeoClient(); if (!c) return;
-  if (seoSelectedForClientId !== c.id){ seoSelectedKwIds = new Set(); seoSelectedForClientId = c.id; }
+  if (seoSelectedForClientId !== c.id){
+    seoSelectedKwIds = new Set(); seoSelectedForClientId = c.id;
+    seoEditMode = false;
+    $('seoBulkEditControls').style.display = 'none';
+    $('seoEditModeBtn').classList.remove('on');
+    $('seoEditModeLabel').textContent = 'Edit';
+  }
 
   const wrap = $('seoKeywordList');
   wrap.innerHTML = '';
+  wrap.classList.toggle('seo-edit-mode', seoEditMode);
   $('seoKeywordEmpty').style.display = c.keywords.length ? 'none' : '';
   if (!c.keywords.length){ renderSeoBulkBar(c); return; }
 
@@ -6353,6 +6515,14 @@ function renderSeoBulkBar(c){
   $('seoSelectAllCheck').indeterminate = n > 0 && n < total;
 }
 
+$('seoEditModeBtn').addEventListener('click', () => {
+  seoEditMode = !seoEditMode;
+  $('seoBulkEditControls').style.display = seoEditMode ? 'flex' : 'none';
+  $('seoEditModeBtn').classList.toggle('on', seoEditMode);
+  $('seoEditModeLabel').textContent = seoEditMode ? 'Done' : 'Edit';
+  if (!seoEditMode) seoSelectedKwIds.clear();
+  renderSeoKeywords();
+});
 $('seoSelectAllCheck').addEventListener('change', e => {
   const c = activeSeoClient(); if (!c) return;
   if (e.target.checked) c.keywords.forEach(k => seoSelectedKwIds.add(k.id));
