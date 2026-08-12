@@ -850,6 +850,18 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-kw-source svg{width:13px; height:13px; stroke:currentColor;}
 .seo-kw-source:hover{color:var(--brand-deep); background:var(--brand-wash);}
 .seo-kw-source.disabled{opacity:.3; cursor:default; pointer-events:none;}
+.seo-kw-copy{width:28px; height:28px; flex:none; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; color:var(--ink-3); background:none; border:none; cursor:pointer; transition:all .12s var(--ease);}
+.seo-kw-copy svg{width:13px; height:13px; stroke:currentColor;}
+.seo-kw-copy:hover{color:var(--brand-deep); background:var(--brand-wash);}
+.seo-kw-copy.disabled{opacity:.3; cursor:default; pointer-events:none;}
+.seo-kw-copy.copied{color:var(--good); background:var(--good-wash);}
+.seo-copy-link-btn{
+  border:none; background:none; padding:0; margin-left:8px; cursor:pointer;
+  font-family:var(--ui); font-size:11.5px; font-weight:600; color:var(--ink-3);
+  text-decoration:underline; text-decoration-color:var(--line); transition:color .12s var(--ease);
+}
+.seo-copy-link-btn:hover{color:var(--brand-deep); text-decoration-color:var(--brand);}
+.seo-copy-link-btn.copied{color:var(--good); text-decoration-color:var(--good);}
 
 .seo-lg-unassigned-row{display:flex; align-items:center; gap:12px; padding:11px 0; border-top:1px solid var(--line-2);}
 .seo-lg-unassigned-row:first-child{border-top:none; padding-top:6px;}
@@ -6184,6 +6196,43 @@ $('seoDeleteClientBtn').addEventListener('click', () => {
 });
 
 /* ---------- keywords ---------- */
+/* Browsers don't let a webpage force a link to open in Incognito/Private
+   mode — there's no API for that, by design, so a site can't silently
+   toggle someone's privacy mode either way. This is the practical
+   next-best thing: copy the exact link so it's one paste away. */
+function seoCopyLink(url, btnEl){
+  const isTextBtn = btnEl && btnEl.classList && btnEl.classList.contains('seo-copy-link-btn');
+  const originalText = isTextBtn ? btnEl.textContent : null;
+  const done = () => {
+    toast('Link copied \u2014 paste it into an Incognito/Private window');
+    if (btnEl && btnEl.classList){
+      btnEl.classList.add('copied');
+      if (isTextBtn) btnEl.textContent = 'Copied!';
+      setTimeout(() => {
+        btnEl.classList.remove('copied');
+        if (isTextBtn) btnEl.textContent = originalText;
+      }, 1200);
+    }
+  };
+  const fallback = () => {
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      done();
+    }catch(e){
+      toast('Couldn\u2019t copy automatically \u2014 copy the link manually', 'err');
+    }
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(done).catch(fallback);
+  } else {
+    fallback();
+  }
+}
+
 function seoLocGroupRow(c, k, loc){
   const row = document.createElement('div');
   row.className = 'seo-lg-row';
@@ -6239,6 +6288,17 @@ function seoLocGroupRow(c, k, loc){
   else sourceEl.title = 'Not scanned yet';
   sourceEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>';
 
+  const copyEl = document.createElement(sourceUrl ? 'button' : 'span');
+  copyEl.className = 'seo-kw-copy' + (sourceUrl ? '' : ' disabled');
+  if (sourceUrl){
+    copyEl.type = 'button';
+    copyEl.title = 'Copy this link \u2014 browsers don\u2019t let a webpage force Incognito/Private mode, but you can paste this into one yourself with Ctrl+Shift+N (Cmd+Shift+N on Mac) for an unpersonalized view';
+    copyEl.addEventListener('click', () => seoCopyLink(sourceUrl, copyEl));
+  } else {
+    copyEl.title = 'Not scanned yet';
+  }
+  copyEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+
   const scanBtn = document.createElement('button');
   scanBtn.type = 'button'; scanBtn.className = 'btn btn-sm seo-loc-scan-btn';
   scanBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><span>Scan</span>';
@@ -6257,7 +6317,7 @@ function seoLocGroupRow(c, k, loc){
     save(); renderSeoKeywords();
   });
 
-  [check, text, rankBox, deltaBox, sourceEl, scanBtn, delBtn].forEach(el => top.appendChild(el));
+  [check, text, rankBox, deltaBox, sourceEl, copyEl, scanBtn, delBtn].forEach(el => top.appendChild(el));
 
   /* ---- secondary line: quiet status, plus an optional drawer for the
      things you rarely touch — the exact location text, its pinned
@@ -6268,7 +6328,17 @@ function seoLocGroupRow(c, k, loc){
   const statusEl = document.createElement('div');
   statusEl.className = 'status seo-loc-status';
   if (loc.error) setStatus(statusEl, loc.error, 'err');
-  else if (loc.sourceUrl) statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) + ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">view the search</a>';
+  else if (loc.sourceUrl){
+    statusEl.innerHTML = esc(fmtWhen(loc.checkedAt)) + ' \u00b7 <a href="' + esc(loc.sourceUrl) + '" target="_blank" rel="noopener">view the search</a>';
+    const copyLinkBtn = document.createElement('button');
+    copyLinkBtn.type = 'button';
+    copyLinkBtn.className = 'seo-copy-link-btn';
+    copyLinkBtn.textContent = 'Copy link';
+    copyLinkBtn.title = 'Copy this link \u2014 browsers don\u2019t let a webpage force Incognito/Private mode, but you can paste this into one yourself with Ctrl+Shift+N (Cmd+Shift+N on Mac) for an unpersonalized view';
+    copyLinkBtn.addEventListener('click', () => seoCopyLink(loc.sourceUrl, copyLinkBtn));
+    statusEl.appendChild(document.createTextNode(' '));
+    statusEl.appendChild(copyLinkBtn);
+  }
   else if (loc.lat != null) setStatus(statusEl, 'Pinned \u2014 ready to scan.', 'ok');
   else setStatus(statusEl, 'Not scanned yet \u2014 Scan will pin it automatically.', '');
 
