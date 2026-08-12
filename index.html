@@ -5742,15 +5742,26 @@ async function seoResolveLocation(client, loc){
 function seoNormalizeDfsOrganic(data){
   const result = ((((data.tasks || [])[0] || {}).result || [])[0]) || {};
   const items = result.items || [];
+  // rank_group is DataForSEO's own authoritative position within the
+  // organic result group (ads/local pack/etc. excluded) — computed by
+  // DataForSEO directly from the live SERP. Using it instead of our own
+  // array index means a stray item with no title can't silently shift
+  // every position after it by one.
   const organic = items.filter(i => i.type === 'organic').map(it => ({
-    title: it.title || '', domain: it.domain || (it.url ? cleanDomain(it.url) : null), url: it.url || null
-  })).filter(x => x.title);
+    title: it.title || '',
+    domain: it.domain || (it.url ? cleanDomain(it.url) : null),
+    url: it.url || null,
+    position: (typeof it.rank_group === 'number' ? it.rank_group : null)
+  }));
   return {organic};
 }
 function seoNormalizeSerperOrganic(data){
   const organic = (data.organic || []).map(x => ({
-    title: x.title || '', domain: x.link ? cleanDomain(x.link) : null, url: x.link || null
-  })).filter(x => x.title);
+    title: x.title || '',
+    domain: x.link ? cleanDomain(x.link) : null,
+    url: x.link || null,
+    position: (typeof x.position === 'number' ? x.position : null)
+  }));
   return {organic};
 }
 async function seoOrganicQuery(keyword, p, region, opts){
@@ -5787,7 +5798,9 @@ async function seoScanOne(client, kw, loc){
       if (domainMatches(organic[i].domain, client.website)){ found = organic[i]; idx = i; break; }
     }
     loc.prevRank = loc.rank;
-    loc.rank = idx >= 0 ? idx + 1 : 0;
+    // Prefer the provider's own authoritative organic position over our
+    // array index — see seoNormalizeDfsOrganic()/seoNormalizeSerperOrganic().
+    loc.rank = found ? (found.position != null ? found.position : idx + 1) : 0;
     loc.matchedTitle = found ? found.title : null;
     loc.matchedDomain = found ? found.domain : null;
     loc.sourceUrl = buildScanUrl(kw.text, g.lat, g.lng, {hl:region.hl, gl:region.gl, depth, surface:'web'});
