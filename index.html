@@ -1923,8 +1923,11 @@ body.embed-mode #mapCard{box-shadow:none;}
                 <input id="seoFinderWebsite" type="text" disabled/>
               </div>
               <div class="f">
-                <label for="seoFinderLocation">Location</label>
-                <input id="seoFinderLocation" type="text" placeholder="City, region, or address" autocomplete="off"/>
+                <label for="seoFinderLocation">Location <span class="opt">click Find so it matches what DataForSEO expects</span></label>
+                <div class="g-inline">
+                  <input id="seoFinderLocation" type="text" placeholder="City, region, or address" autocomplete="off"/>
+                  <button class="btn" type="button" id="seoFinderFindLocBtn">Find</button>
+                </div>
               </div>
               <div class="f">
                 <label for="seoFinderRegion">Region</label>
@@ -6140,6 +6143,48 @@ $('seoAutoWeekdays').addEventListener('click', e => {
 
 /* ---------- Keyword Finder tab: run controls, its own schedule (same
    engine as Automatic scans, pointed at c.keywordFinder), and results. ---------- */
+/* DataForSEO's Labs "ranked keywords" endpoint needs location_name in
+   its own canonical "City,Region,Country" format — a bare city name
+   like "Red Deer" gets rejected outright with an Invalid Field error.
+   This is a separate lookup from the shared nominatim() function (which
+   GBP's own geocoding relies on) — it asks Nominatim for structured
+   address components instead of just a display string, so DataForSEO
+   sees exactly the shape it expects. */
+async function seoNominatimStructured(q){
+  const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=' + encodeURIComponent(q), {headers:{Accept:'application/json'}});
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return data.length ? data[0] : null;
+}
+function seoBuildDfsLocationName(hit){
+  const a = hit.address || {};
+  const city = a.city || a.town || a.village || a.municipality || a.county || '';
+  const state = a.state || a.province || '';
+  const country = a.country || '';
+  return [city, state, country].filter(Boolean).join(',');
+}
+$('seoFinderFindLocBtn').addEventListener('click', async () => {
+  const raw = $('seoFinderLocation').value.trim();
+  if (!raw){ setStatus('seoFinderStatus', 'Type a location first.', 'err'); return; }
+  const btn = $('seoFinderFindLocBtn');
+  btn.disabled = true;
+  setStatus('seoFinderStatus', 'Looking up ' + raw + '\u2026', 'busy');
+  try{
+    const hit = await seoNominatimStructured(raw);
+    if (!hit){ setStatus('seoFinderStatus', 'No match. Add the province/state or country and try again.', 'err'); return; }
+    const locationName = seoBuildDfsLocationName(hit);
+    if (!locationName){ setStatus('seoFinderStatus', 'Found it, but couldn\u2019t work out a clean city/region/country \u2014 try a more specific search.', 'err'); return; }
+    $('seoFinderLocation').value = locationName;
+    const c = activeSeoClient();
+    if (c){ c.keywordFinder.location = locationName; save(); }
+    setStatus('seoFinderStatus', 'Resolved to \u201c' + locationName + '\u201d \u2014 ready to run.', 'ok');
+  }catch(err){
+    setStatus('seoFinderStatus', 'Lookup failed: ' + ((err && err.message) || err), 'err');
+  }finally{
+    btn.disabled = false;
+  }
+});
+
 function seoLoadFinder(c){
   $('seoFinderWebsite').value = c.website || '(add a website on the Dashboard tab)';
   $('seoFinderLocation').value = c.keywordFinder.location || '';
@@ -6229,7 +6274,12 @@ $('seoFinderRunBtn').addEventListener('click', async () => {
       ? 'Found ' + found.length + ' keyword' + (found.length === 1 ? '' : 's') + ' you\u2019re not tracking yet.'
       : 'No new keywords \u2014 either everything found is already on your list, or nothing else ranks yet.', 'ok');
   }catch(err){
-    setStatus('seoFinderStatus', 'Lookup failed: ' + err.message, 'err');
+    const msg = (err && err.message) || String(err);
+    if (/location_name/i.test(msg)){
+      setStatus('seoFinderStatus', 'DataForSEO didn\u2019t recognize that location \u2014 click Find next to it first, then try again.', 'err');
+    } else {
+      setStatus('seoFinderStatus', 'Lookup failed: ' + msg, 'err');
+    }
   }finally{
     btn.disabled = false;
   }
