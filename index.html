@@ -870,7 +870,7 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-finder-row{display:flex; align-items:center; gap:14px; padding:13px 20px; border-top:1px solid var(--line-2);}
 .seo-finder-row:first-child{border-top:none;}
 .seo-finder-row:hover{background:var(--card-2);}
-.seo-finder-vol{font-family:var(--mono); font-size:11px; color:var(--ink-3); flex:none; width:70px; text-align:right;}
+.seo-finder-vol{font-family:var(--ui); font-size:10.5px; color:var(--ink-3); flex:none; width:auto; text-align:right; white-space:nowrap;}
 .seo-finder-loc-field{position:relative;}
 .seo-finder-loc-picks{
   position:absolute; top:100%; left:0; right:0; z-index:20; margin-top:6px;
@@ -1935,12 +1935,11 @@ body.embed-mode #mapCard{box-shadow:none;}
                 <input id="seoFinderWebsite" type="text" disabled/>
               </div>
               <div class="f seo-finder-loc-field">
-                <label for="seoFinderLocation">Location <span class="opt">click Find and pick from DataForSEO's own list</span></label>
+                <label for="seoFinderLocation">Location <span class="opt">same lookup as the Keywords tab — click Find to pin it</span></label>
                 <div class="g-inline">
                   <input id="seoFinderLocation" type="text" placeholder="City, region, or address" autocomplete="off"/>
                   <button class="btn" type="button" id="seoFinderFindLocBtn">Find</button>
                 </div>
-                <div class="seo-finder-loc-picks" id="seoFinderLocationPicks" style="display:none"></div>
               </div>
               <div class="f">
                 <label for="seoFinderRegion">Region</label>
@@ -1953,7 +1952,7 @@ body.embed-mode #mapCard{box-shadow:none;}
 
           <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Automatic scans</h2><div class="rule"></div></div>
           <div class="card seo-autoscan-card" id="seoFinderAutoCard">
-            <label class="sw seo-autoscan-toggle"><input type="checkbox" id="seoFinderAutoEnabled"/><i></i><span><b>Run Keyword Finder automatically</b> — periodically checks for new keywords this site has started ranking for, using the location above.</span></label>
+            <label class="sw seo-autoscan-toggle"><input type="checkbox" id="seoFinderAutoEnabled"/><i></i><span><b>Run Keyword Finder automatically</b> — periodically expands from your tracked keywords to suggest related ones, using the location above.</span></label>
             <div id="seoFinderAutoBody" style="display:none">
               <div class="g2">
                 <div class="f">
@@ -1987,13 +1986,13 @@ body.embed-mode #mapCard{box-shadow:none;}
               </div>
               <div class="seo-autoscan-status" id="seoFinderAutoStatusLine"></div>
             </div>
-            <div class="hint" style="margin-top:12px">Requires a DataForSEO login/password on step 4 — this lookup uses DataForSEO's keyword-research data specifically, not Serper. You'll also need a location confirmed with Find above before this can run. This schedule only fires while GBP Reporter is open in a browser tab somewhere.</div>
+            <div class="hint" style="margin-top:12px">Uses whichever search provider is configured on step 4 (DataForSEO or Serper) — same as everywhere else in this tool. It expands from your tracked keywords, so add at least one first, and a location confirmed with Find above. This schedule only fires while GBP Reporter is open in a browser tab somewhere.</div>
           </div>
 
           <div class="tbl-card">
             <div id="seoFinderResults"></div>
             <div class="seo-kw-empty" id="seoFinderEmpty">
-              No new keywords found yet. Set a location above and click <b>Run Keyword Finder</b> — it'll show anything your site already ranks for that isn't on your tracked list.
+              No suggestions yet. Add a couple of keywords on the Keywords tab, set a location above, and click <b>Run Keyword Finder</b> — it expands from what you're tracking and surfaces related searches worth adding.
             </div>
           </div>
 
@@ -5707,7 +5706,7 @@ function blankAutoScan(){
   return { enabled:false, frequency:'weekly', days:[1], dayOfMonth:1, time:'09:00', lastRun:null };
 }
 function blankKeywordFinder(){
-  return { enabled:false, frequency:'weekly', days:[1], dayOfMonth:1, time:'09:00', lastRun:null, location:'', locationCode:null, regionIdx:0 };
+  return { enabled:false, frequency:'weekly', days:[1], dayOfMonth:1, time:'09:00', lastRun:null, location:'', locationCode:null, lat:null, lng:null, regionIdx:0 };
 }
 function blankSeoClient(name){
   return {
@@ -6156,115 +6155,34 @@ $('seoAutoWeekdays').addEventListener('click', e => {
 
 /* ---------- Keyword Finder tab: run controls, its own schedule (same
    engine as Automatic scans, pointed at c.keywordFinder), and results. ---------- */
-/* DataForSEO's Labs "ranked keywords" endpoint only accepts a location
-   that exactly matches an entry in DataForSEO's own location database —
-   no amount of nicely-formatted guessing gets around that, since it's a
-   literal lookup against their list, not a geocoder. So this asks
-   DataForSEO directly what locations it supports, lets you pick one,
-   and uses that entry's numeric location_code (not a hand-built string)
-   when running the scan — which is guaranteed to be valid because it
-   came from DataForSEO itself. Cached after the first fetch so picking
-   again later doesn't re-download the whole list. */
-let __dfsLabsLocationsCache = null;
-async function dfsLabsLocations(){
-  if (__dfsLabsLocationsCache) return __dfsLabsLocationsCache;
-  const login = (state.settings.dfsLogin || '').trim();
-  const pass = (state.settings.dfsPassword || '').trim();
-  if (!login || !pass){
-    const e = new Error('add your DataForSEO login and API password on step four');
-    e.fatal = true; throw e;
-  }
-  const url = (state.settings.proxyPrefix || '').trim() + 'https://api.dataforseo.com/v3/dataforseo_labs/locations_and_languages';
-  let res;
-  try{
-    res = await fetch(url, { headers:{'Authorization':'Basic ' + btoa(login + ':' + pass)} });
-  }catch(e){ throw new Error('the request was blocked by the browser \u2014 set a CORS proxy prefix on step four'); }
-  if (res.status === 401 || res.status === 403) throw new Error('DataForSEO rejected those credentials');
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  if (data.status_code && data.status_code !== 20000) throw new Error('DataForSEO said: ' + (data.status_message || data.status_code));
-  const t = (data.tasks || [])[0];
-  if (t && t.status_code && t.status_code !== 20000) throw new Error('DataForSEO task error: ' + (t.status_message || t.status_code));
-  let items = (t || {}).result || [];
-  // defensive: some DataForSEO reference endpoints nest one extra level
-  if (items.length === 1 && items[0] && Array.isArray(items[0].items)) items = items[0].items;
-  items = items.filter(x => x && x.location_name && x.location_code != null);
-  __dfsLabsLocationsCache = items;
-  return items;
-}
-const SEO_GL_TO_ISO = { UK: 'GB' }; // REGIONS uses "UK" as a friendly label; DataForSEO/ISO use "GB"
-function seoScoreDfsLocations(pool, q){
-  return pool
-    .map(l => {
-      const name = l.location_name.toLowerCase();
-      const firstPart = name.split(',')[0];
-      let score = -1;
-      if (firstPart === q) score = 3;
-      else if (firstPart.startsWith(q)) score = 2;
-      else if (name.includes(q)) score = 1;
-      return {loc: l, score};
-    })
-    .filter(x => x.score >= 0)
-    .sort((a, b) => b.score - a.score || a.loc.location_name.length - b.loc.location_name.length);
-}
-function seoSearchDfsLocations(all, text, countryIso){
-  const q = text.trim().toLowerCase();
-  const iso = (SEO_GL_TO_ISO[countryIso] || countryIso || '').toUpperCase();
-  const inCountry = all.filter(l => (l.country_iso_code || '').toUpperCase() === iso);
-  let scored = seoScoreDfsLocations(inCountry, q);
-  // fall back to a global search if nothing in the selected country actually matched
-  if (!scored.length) scored = seoScoreDfsLocations(all, q);
-  return scored.slice(0, 8).map(x => x.loc);
-}
-function seoShowFinderLocationPicks(picks){
-  const box = $('seoFinderLocationPicks');
-  box.innerHTML = '';
-  if (!picks.length){ box.style.display = 'none'; return; }
-  picks.forEach(loc => {
-    const btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'seo-finder-loc-pick';
-    btn.textContent = loc.location_name;
-    btn.addEventListener('click', () => {
-      const c = activeSeoClient(); if (!c) return;
-      $('seoFinderLocation').value = loc.location_name;
-      c.keywordFinder.location = loc.location_name;
-      c.keywordFinder.locationCode = loc.location_code;
-      save();
-      box.style.display = 'none';
-      setStatus('seoFinderStatus', 'Using \u201c' + loc.location_name + '\u201d \u2014 ready to run.', 'ok');
-    });
-    box.appendChild(btn);
-  });
-  box.style.display = 'flex';
-}
+/* Location resolution for Keyword Finder uses the exact same mechanism
+   as the Keywords tab: a plain Nominatim lookup into lat/lng, via the
+   same shared nominatim() function GBP's own geocoding relies on. No
+   DataForSEO location database involved, so there's nothing that can
+   reject it as "unrecognized" the way DataForSEO Labs did. */
 $('seoFinderLocation').addEventListener('input', () => {
   const c = activeSeoClient(); if (!c) return;
-  if (c.keywordFinder.locationCode != null){
-    c.keywordFinder.locationCode = null;
+  if (c.keywordFinder.lat != null || c.keywordFinder.lng != null){
+    c.keywordFinder.lat = null; c.keywordFinder.lng = null;
     save();
     setStatus('seoFinderStatus', 'Location changed \u2014 click Find again before running.', '');
   }
-  $('seoFinderLocationPicks').style.display = 'none';
 });
 $('seoFinderFindLocBtn').addEventListener('click', async () => {
   const raw = $('seoFinderLocation').value.trim();
   if (!raw){ setStatus('seoFinderStatus', 'Type a location first.', 'err'); return; }
   const c = activeSeoClient(); if (!c) return;
-  c.keywordFinder.locationCode = null; // clear any previous pick until a new one is confirmed
   const btn = $('seoFinderFindLocBtn');
   btn.disabled = true;
-  setStatus('seoFinderStatus', 'Checking DataForSEO\u2019s own location list for \u201c' + raw + '\u201d\u2026', 'busy');
+  setStatus('seoFinderStatus', 'Looking up ' + raw + '\u2026', 'busy');
   try{
-    const region = REGIONS[+$('seoFinderRegion').value || 0] || REGIONS[0];
-    const all = await dfsLabsLocations();
-    const picks = seoSearchDfsLocations(all, raw, region.gl);
-    if (!picks.length){
-      seoShowFinderLocationPicks([]);
-      setStatus('seoFinderStatus', 'DataForSEO doesn\u2019t have a location matching \u201c' + raw + '\u201d there \u2014 try just the province/state, or the country itself.', 'err');
-    } else {
-      seoShowFinderLocationPicks(picks);
-      setStatus('seoFinderStatus', picks.length === 1 ? 'One match \u2014 click it to use it.' : picks.length + ' matches \u2014 pick the right one below.', 'ok');
-    }
+    const hit = await nominatim(raw);
+    if (!hit){ setStatus('seoFinderStatus', 'No match. Add the city or province and try again.', 'err'); return; }
+    c.keywordFinder.location = raw;
+    c.keywordFinder.lat = parseFloat(parseFloat(hit.lat).toFixed(7));
+    c.keywordFinder.lng = parseFloat(parseFloat(hit.lon).toFixed(7));
+    save();
+    setStatus('seoFinderStatus', hit.display_name, 'ok');
   }catch(err){
     setStatus('seoFinderStatus', 'Lookup failed: ' + ((err && err.message) || err), 'err');
   }finally{
@@ -6272,11 +6190,11 @@ $('seoFinderFindLocBtn').addEventListener('click', async () => {
   }
 });
 
+
 function seoLoadFinder(c){
   $('seoFinderWebsite').value = c.website || '(add a website on the Dashboard tab)';
   $('seoFinderLocation').value = c.keywordFinder.location || '';
   $('seoFinderRegion').value = c.keywordFinder.regionIdx || 0;
-  $('seoFinderLocationPicks').style.display = 'none';
   const a = c.keywordFinder;
   $('seoFinderAutoEnabled').checked = !!a.enabled;
   $('seoFinderAutoBody').style.display = a.enabled ? 'block' : 'none';
@@ -6347,19 +6265,22 @@ $('seoFinderRunBtn').addEventListener('click', async () => {
   c.keywordFinder.regionIdx = +$('seoFinderRegion').value || 0;
   save();
   if (!c.website || !c.website.trim()){ setStatus('seoFinderStatus', 'Add this client\u2019s website on the Dashboard tab first.', 'err'); return; }
-  if (c.keywordFinder.locationCode == null){ setStatus('seoFinderStatus', 'Click Find and pick a location from the list first.', 'err'); return; }
+  if (c.keywordFinder.lat == null || c.keywordFinder.lng == null){ setStatus('seoFinderStatus', 'Click Find next to the location first.', 'err'); return; }
+  if (!c.keywords.length){ setStatus('seoFinderStatus', 'Add at least one keyword on the Keywords tab first \u2014 Keyword Finder expands from what you\u2019re already tracking.', 'err'); return; }
   const btn = $('seoFinderRunBtn');
   btn.disabled = true;
-  setStatus('seoFinderStatus', 'Looking up ' + c.website + ' in ' + c.keywordFinder.location + '\u2026', 'busy');
+  setStatus('seoFinderStatus', 'Starting\u2026', 'busy');
   try{
-    const found = await seoRunKeywordFinder(c);
+    const found = await seoRunKeywordFinder(c, (i, total, seed) => {
+      setStatus('seoFinderStatus', 'Checking related searches for \u201c' + seed + '\u201d (' + i + ' / ' + total + ')\u2026', 'busy');
+    });
     c.keywordFinder.lastRun = Date.now();
     save();
     renderSeoFinderResults(c);
     seoRenderFinderAutoStatus(c);
     setStatus('seoFinderStatus', found.length
-      ? 'Found ' + found.length + ' keyword' + (found.length === 1 ? '' : 's') + ' you\u2019re not tracking yet.'
-      : 'No new keywords \u2014 either everything found is already on your list, or nothing else ranks yet.', 'ok');
+      ? 'Found ' + found.length + ' related keyword' + (found.length === 1 ? '' : 's') + ' you\u2019re not tracking yet \u2014 click + Add on any of them to verify a real rank.'
+      : 'No new suggestions this time \u2014 try again later, or add a few more keywords first to expand from.', 'ok');
   }catch(err){
     setStatus('seoFinderStatus', 'Lookup failed: ' + ((err && err.message) || err), 'err');
   }finally{
@@ -6376,11 +6297,8 @@ function renderSeoFinderResults(c){
     row.className = 'seo-finder-row';
     const text = document.createElement('span');
     text.className = 'seo-lg-text'; text.textContent = item.keyword;
-    const vol = document.createElement('span');
-    vol.className = 'seo-finder-vol';
-    vol.textContent = item.volume != null ? item.volume.toLocaleString() + '/mo' : '\u2014';
-    const rankBox = document.createElement('div');
-    rankBox.innerHTML = seoRankPill(item.position);
+    const tag = document.createElement('span');
+    tag.className = 'seo-finder-vol'; tag.textContent = 'not scanned yet';
     const addBtn = document.createElement('button');
     addBtn.type = 'button'; addBtn.className = 'btn btn-sm btn-dark';
     addBtn.textContent = '+ Add';
@@ -6391,7 +6309,7 @@ function renderSeoFinderResults(c){
     dismissBtn.title = 'Dismiss \u2014 won\u2019t be suggested again';
     dismissBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
     dismissBtn.addEventListener('click', () => seoDismissDiscoveredKeyword(c, item));
-    [text, vol, rankBox, addBtn, dismissBtn].forEach(el => row.appendChild(el));
+    [text, tag, addBtn, dismissBtn].forEach(el => row.appendChild(el));
     wrap.appendChild(row);
   });
 }
@@ -6456,63 +6374,85 @@ async function seoRunDueSchedules(){
 setInterval(seoRunDueSchedules, 60 * 1000);
 setTimeout(seoRunDueSchedules, 10000);
 
-/* ---------- Keyword Finder — discovers keywords the site already ranks
-   for but aren't being tracked yet. Uses the same DataForSEO Labs
-   ranked_keywords endpoint the GBP tool's own "Keyword finder" mode
-   calls, but targets the location by its numeric location_code (looked
-   up from DataForSEO's own locations list, see dfsLabsLocations() above)
-   instead of a hand-built location_name string, since only an exact
-   database match is accepted. ---------- */
-async function seoDfsRankedKeywordsByCode(domain, locationCode, languageCode){
-  const login = (state.settings.dfsLogin || '').trim();
-  const pass = (state.settings.dfsPassword || '').trim();
-  if (!login || !pass){
-    const e = new Error('add your DataForSEO login and API password on step four');
-    e.fatal = true; throw e;
-  }
-  const url = (state.settings.proxyPrefix || '').trim() + 'https://api.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live';
-  const task = {
-    target: domain, location_code: locationCode, language_code: languageCode,
-    limit: 300, load_rank_absolute: true,
-    order_by: ['ranked_serp_element.serp_item.rank_absolute,asc']
-  };
-  let res;
-  try{
-    res = await fetch(url, {
-      method:'POST',
-      headers:{'Authorization':'Basic ' + btoa(login + ':' + pass), 'Content-Type':'application/json'},
-      body: JSON.stringify([task])
+/* ---------- Keyword Finder — discovers keywords worth tracking by
+   expanding from the client's own already-tracked keywords, using the
+   exact same live-SERP infrastructure as the Keywords tab (dfsQuery/
+   serperQuery, lat/lng, region) — not DataForSEO's separate Labs
+   product. For each seed keyword, it runs the same live search the
+   Keywords tab would, and pulls the "related searches" and "People also
+   ask" questions Google returns alongside the organic results — those
+   are genuinely adjacent keyword ideas, sourced live rather than from a
+   keyword database that may be stale or may not recognize a location.
+   Results have no rank yet (a related search is a suggestion, not
+   something already verified) — clicking "+ Add" runs a real scan on it
+   immediately via the same accurate engine as everywhere else, so the
+   number that ends up on the tracked list is always freshly verified. ---------- */
+function seoExtractSerpSuggestions(rawData, provider){
+  const out = new Set();
+  if (provider === 'serper'){
+    (rawData.relatedSearches || []).forEach(x => {
+      const q = ((x && (x.query || x.text)) || '').trim();
+      if (q) out.add(q);
     });
-  }catch(e){ throw new Error('the request was blocked by the browser \u2014 set a CORS proxy prefix on step four'); }
-  if (res.status === 401 || res.status === 403) throw new Error('DataForSEO rejected those credentials');
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
-  if (data.status_code && data.status_code !== 20000) throw new Error('DataForSEO said: ' + (data.status_message || data.status_code));
-  const t = (data.tasks || [])[0];
-  if (t && t.status_code && t.status_code !== 20000) throw new Error('DataForSEO task error: ' + (t.status_message || t.status_code));
-  const items = (((t || {}).result || [])[0] || {}).items || [];
-  return items.map(it => {
-    const kd = it.keyword_data || {}, info = kd.keyword_info || {};
-    const serp = (it.ranked_serp_element || {}).serp_item || {};
-    return {
-      keyword: kd.keyword || '',
-      position: serp.rank_absolute || serp.rank_group || null,
-      volume: info.search_volume != null ? info.search_volume : null,
-      url: serp.url || ''
-    };
-  }).filter(x => x.keyword);
+    (rawData.peopleAlsoAsk || []).forEach(x => {
+      const q = ((x && (x.question || x.title)) || '').trim();
+      if (q) out.add(q);
+    });
+  } else {
+    const result = ((((rawData.tasks || [])[0] || {}).result || [])[0]) || {};
+    const items = result.items || [];
+    items.forEach(it => {
+      if (it.type === 'related_searches'){
+        const sub = it.items || it.related_searches || [];
+        sub.forEach(s => {
+          const q = (typeof s === 'string' ? s : ((s && (s.query || s.title || s.keyword)) || '')).trim();
+          if (q) out.add(q);
+        });
+      }
+      if (it.type === 'people_also_ask'){
+        const sub = it.items && it.items.length ? it.items : [it];
+        sub.forEach(s => {
+          const q = ((s && (s.title || s.question)) || '').trim();
+          if (q) out.add(q);
+        });
+      }
+    });
+  }
+  return Array.from(out);
 }
-async function seoRunKeywordFinder(c){
-  const domain = cleanDomain(c.website);
-  if (!domain) throw new Error('Add this client\u2019s website on the Dashboard tab first.');
-  if (c.keywordFinder.locationCode == null) throw new Error('Click Find and pick a location from the list first \u2014 DataForSEO only accepts locations from its own database.');
+const SEO_FINDER_MAX_SEEDS = 15; // keeps a run to a bounded number of live searches
+async function seoRunKeywordFinder(c, onProgress){
+  if (!c.website || !c.website.trim()) throw new Error('Add this client\u2019s website on the Dashboard tab first.');
+  if (c.keywordFinder.lat == null || c.keywordFinder.lng == null) throw new Error('Click Find next to the location first.');
+  if (!c.keywords.length) throw new Error('Add at least one keyword on the Keywords tab first \u2014 Keyword Finder expands from what you\u2019re already tracking.');
+  if (!providerReady()) throw new Error('Search provider isn\u2019t configured yet (GBP Locations \u2192 step 4).');
   const region = REGIONS[c.keywordFinder.regionIdx || 0] || REGIONS[0];
-  const items = await seoDfsRankedKeywordsByCode(domain, c.keywordFinder.locationCode, region.hl);
+  const provider = state.settings.provider || 'dataforseo';
+  const g = {lat: c.keywordFinder.lat, lng: c.keywordFinder.lng};
+  const depth = state.settings.depth || 100;
+  const seeds = c.keywords.slice(0, SEO_FINDER_MAX_SEEDS).map(k => k.text);
   const trackedSet = new Set(c.keywords.map(k => k.text.trim().toLowerCase()));
   const dismissedSet = new Set((c.dismissedFinderKeywords || []).map(s => s.toLowerCase()));
-  const fresh = items
-    .filter(it => it.keyword && !trackedSet.has(it.keyword.trim().toLowerCase()) && !dismissedSet.has(it.keyword.trim().toLowerCase()))
-    .sort((a, b) => (a.position == null ? 9999 : a.position) - (b.position == null ? 9999 : b.position));
+  const found = new Map(); // lowercase -> display text
+  for (let i = 0; i < seeds.length; i++){
+    const seed = seeds[i];
+    if (onProgress) onProgress(i + 1, seeds.length, seed);
+    try{
+      const raw = provider === 'serper'
+        ? await serperQuery(seed, g, region, 'web', {depth})
+        : await dfsQuery(seed, g, region, 'web', {depth});
+      seoExtractSerpSuggestions(raw, provider).forEach(s => {
+        const key = s.trim().toLowerCase();
+        if (key && !trackedSet.has(key) && !dismissedSet.has(key) && !found.has(key)){
+          found.set(key, s.trim());
+        }
+      });
+    }catch(err){
+      if (err && err.fatal) throw err; // a bad credential etc. should stop the whole run
+      // otherwise: one seed failing (rate limit, empty result) shouldn't stop the rest
+    }
+  }
+  const fresh = Array.from(found.values()).map(text => ({keyword: text, position: null, volume: null, url: ''}));
   c.discoveredKeywords = fresh;
   return fresh;
 }
