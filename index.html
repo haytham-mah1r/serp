@@ -867,22 +867,6 @@ body.embed-mode #seoRail, body.embed-mode #seoStage{display:none !important;}
 .seo-lg-unassigned-row:first-child{border-top:none; padding-top:6px;}
 .seo-lg-quick-loc{flex:none; width:200px; padding:8px 11px; border-radius:8px; border:1px solid var(--line); font-family:var(--ui); font-size:12.5px; background:var(--card-2);}
 .seo-lg-quick-loc:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(232,119,34,.12);}
-.seo-finder-row{display:flex; align-items:center; gap:14px; padding:13px 20px; border-top:1px solid var(--line-2);}
-.seo-finder-row:first-child{border-top:none;}
-.seo-finder-row:hover{background:var(--card-2);}
-.seo-finder-vol{font-family:var(--ui); font-size:10.5px; color:var(--ink-3); flex:none; width:auto; text-align:right; white-space:nowrap;}
-.seo-finder-loc-field{position:relative;}
-.seo-finder-loc-picks{
-  position:absolute; top:100%; left:0; right:0; z-index:20; margin-top:6px;
-  display:flex; flex-direction:column; gap:2px; padding:6px;
-  background:var(--card); border:1px solid var(--line); border-radius:var(--r-md); box-shadow:var(--sh-3);
-  max-height:220px; overflow-y:auto;
-}
-.seo-finder-loc-pick{
-  text-align:left; border:none; background:none; padding:8px 10px; border-radius:7px;
-  font-family:var(--ui); font-size:12.5px; color:var(--ink); cursor:pointer; transition:background .12s var(--ease);
-}
-.seo-finder-loc-pick:hover{background:var(--brand-wash); color:var(--brand-deep);}
 .seo-loc-delta{font-family:var(--mono); font-size:11px; text-align:center; color:var(--ink-3);}
 .seo-loc-delta.up{color:var(--good); font-weight:700;}
 .seo-loc-delta.down{color:var(--bad); font-weight:700;}
@@ -1703,7 +1687,6 @@ body.embed-mode #mapCard{box-shadow:none;}
       <nav class="modes">
         <button class="seo-mode on" data-seoview="dashboard">Dashboard</button>
         <button class="seo-mode" data-seoview="keywords">Keywords</button>
-        <button class="seo-mode" data-seoview="finder">Keyword Finder</button>
       </nav>
       <div class="save-pill" id="seoSavePill"><i></i><span>Autosave on</span></div>
     </header>
@@ -1912,6 +1895,7 @@ body.embed-mode #mapCard{box-shadow:none;}
                 <span class="seo-bulk-count" id="seoBulkCountLabel">0 selected</span>
                 <button class="btn btn-sm" id="seoDeleteSelBtn" disabled style="color:var(--alert)">Delete selected</button>
                 <button class="btn btn-sm" id="seoRemoveLocBtn" disabled>Remove location…</button>
+                <button class="btn btn-sm" id="seoRescanSelBtn" disabled>Rescan selected</button>
                 <button class="btn btn-sm btn-dark" id="seoApplyLocBtn" disabled>Apply location to selected</button>
               </div>
             </div>
@@ -1924,80 +1908,6 @@ body.embed-mode #mapCard{box-shadow:none;}
         </div>
       </div>
 
-      <!-- ============ KEYWORD FINDER ============ -->
-      <div class="seo-view" id="seoview-finder">
-        <div id="seoFinderView" style="display:none">
-
-          <div class="card seo-kw-toolbar">
-            <div class="seo-kw-add">
-              <div class="f">
-                <label for="seoFinderWebsite">Website <span class="opt">from the Dashboard tab</span></label>
-                <input id="seoFinderWebsite" type="text" disabled/>
-              </div>
-              <div class="f seo-finder-loc-field">
-                <label for="seoFinderLocation">Location <span class="opt">same lookup as the Keywords tab — click Find to pin it</span></label>
-                <div class="g-inline">
-                  <input id="seoFinderLocation" type="text" placeholder="City, region, or address" autocomplete="off"/>
-                  <button class="btn" type="button" id="seoFinderFindLocBtn">Find</button>
-                </div>
-              </div>
-              <div class="f">
-                <label for="seoFinderRegion">Region</label>
-                <select id="seoFinderRegion"></select>
-              </div>
-              <button class="btn btn-go" id="seoFinderRunBtn">Run Keyword Finder</button>
-            </div>
-            <div class="status" id="seoFinderStatus"></div>
-          </div>
-
-          <div class="section-h seo-section-h"><h2><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>Automatic scans</h2><div class="rule"></div></div>
-          <div class="card seo-autoscan-card" id="seoFinderAutoCard">
-            <label class="sw seo-autoscan-toggle"><input type="checkbox" id="seoFinderAutoEnabled"/><i></i><span><b>Run Keyword Finder automatically</b> — periodically expands from your tracked keywords to suggest related ones, using the location above.</span></label>
-            <div id="seoFinderAutoBody" style="display:none">
-              <div class="g2">
-                <div class="f">
-                  <label for="seoFinderAutoFrequency">Frequency</label>
-                  <select id="seoFinderAutoFrequency">
-                    <option value="daily">Every day</option>
-                    <option value="weekly">Specific days each week</option>
-                    <option value="monthly">Once a month</option>
-                  </select>
-                </div>
-                <div class="f">
-                  <label for="seoFinderAutoTime">Time of day <span class="opt">your browser's local time</span></label>
-                  <input id="seoFinderAutoTime" type="time" value="09:00"/>
-                </div>
-              </div>
-              <div class="f" id="seoFinderAutoWeekdaysWrap">
-                <label>Days of the week</label>
-                <div class="seo-weekday-chips" id="seoFinderAutoWeekdays">
-                  <button type="button" class="seo-weekday-chip" data-day="1">Mon</button>
-                  <button type="button" class="seo-weekday-chip" data-day="2">Tue</button>
-                  <button type="button" class="seo-weekday-chip" data-day="3">Wed</button>
-                  <button type="button" class="seo-weekday-chip" data-day="4">Thu</button>
-                  <button type="button" class="seo-weekday-chip" data-day="5">Fri</button>
-                  <button type="button" class="seo-weekday-chip" data-day="6">Sat</button>
-                  <button type="button" class="seo-weekday-chip" data-day="0">Sun</button>
-                </div>
-              </div>
-              <div class="f" id="seoFinderAutoMonthlyWrap" style="display:none">
-                <label for="seoFinderAutoDayOfMonth">Day of the month</label>
-                <input id="seoFinderAutoDayOfMonth" type="text" inputmode="numeric" placeholder="1–28" style="max-width:110px"/>
-              </div>
-              <div class="seo-autoscan-status" id="seoFinderAutoStatusLine"></div>
-            </div>
-            <div class="hint" style="margin-top:12px">Uses whichever search provider is configured on step 4 (DataForSEO or Serper) — same as everywhere else in this tool. It expands from your tracked keywords, so add at least one first, and a location confirmed with Find above. This schedule only fires while GBP Reporter is open in a browser tab somewhere.</div>
-          </div>
-
-          <div class="tbl-card">
-            <div id="seoFinderResults"></div>
-            <div class="seo-kw-empty" id="seoFinderEmpty">
-              No suggestions yet. Add a couple of keywords on the Keywords tab, set a location above, and click <b>Run Keyword Finder</b> — it expands from what you're tracking and surfaces related searches worth adding.
-            </div>
-          </div>
-
-        </div>
-      </div>
 
     </div>
   </main>
@@ -5705,15 +5615,11 @@ if (EMBED_ID){
 function blankAutoScan(){
   return { enabled:false, frequency:'weekly', days:[1], dayOfMonth:1, time:'09:00', lastRun:null };
 }
-function blankKeywordFinder(){
-  return { enabled:false, frequency:'weekly', days:[1], dayOfMonth:1, time:'09:00', lastRun:null, location:'', locationCode:null, lat:null, lng:null, regionIdx:0 };
-}
 function blankSeoClient(name){
   return {
     id: uid(), name: name || 'New client', projectLead:'', cms:'', status:'Active',
     allocatedHours:'', monthlyProgress:'', lastMonthlyCall:'', website:'', basecampLink:'',
-    reportLink:'', notes:'', logoUrl:'', activeKeywordId:null, locationCache:{}, keywords:[], autoScan: blankAutoScan(),
-    keywordFinder: blankKeywordFinder(), discoveredKeywords: [], dismissedFinderKeywords: []
+    reportLink:'', notes:'', logoUrl:'', activeKeywordId:null, locationCache:{}, keywords:[], autoScan: blankAutoScan()
   };
 }
 function blankSeoLocation(label, regionIdx){
@@ -5745,14 +5651,6 @@ function migrateSeoClient(c){
     Object.keys(d).forEach(k => { if (c.autoScan[k] === undefined) c.autoScan[k] = d[k]; });
     if (!Array.isArray(c.autoScan.days)) c.autoScan.days = [1];
   }
-  if (!c.keywordFinder || typeof c.keywordFinder !== 'object') c.keywordFinder = blankKeywordFinder();
-  else {
-    const d = blankKeywordFinder();
-    Object.keys(d).forEach(k => { if (c.keywordFinder[k] === undefined) c.keywordFinder[k] = d[k]; });
-    if (!Array.isArray(c.keywordFinder.days)) c.keywordFinder.days = [1];
-  }
-  if (!Array.isArray(c.discoveredKeywords)) c.discoveredKeywords = [];
-  if (!Array.isArray(c.dismissedFinderKeywords)) c.dismissedFinderKeywords = [];
   if (!c.status) c.status = 'Active';
   return c;
 }
@@ -5893,6 +5791,25 @@ async function seoOrganicQuery(keyword, p, region, opts){
   const data = await dfsQuery(keyword, p, region, 'web', opts);
   return seoNormalizeDfsOrganic(data);
 }
+function seoDelay(ms){ return new Promise(res => setTimeout(res, ms)); }
+const SEO_SCAN_MAX_ATTEMPTS = 3;
+async function seoOrganicQueryWithRetry(keyword, p, region, opts){
+  let lastErr;
+  for (let attempt = 1; attempt <= SEO_SCAN_MAX_ATTEMPTS; attempt++){
+    try{
+      return await seoOrganicQuery(keyword, p, region, opts);
+    }catch(err){
+      lastErr = err;
+      // A bad credential, unsupported provider, etc. won't fix itself on
+      // retry — fail fast instead of wasting time and API calls. Anything
+      // else (a transient server error, a dropped connection, a rate
+      // limit) is worth trying again with a short backoff.
+      if (err && err.fatal) throw err;
+      if (attempt < SEO_SCAN_MAX_ATTEMPTS) await seoDelay(attempt * 1200);
+    }
+  }
+  throw lastErr;
+}
 
 async function seoScanOne(client, kw, loc){
   if (!loc.label || !loc.label.trim()){ loc.error = 'Add a location first.'; return; }
@@ -5901,13 +5818,16 @@ async function seoScanOne(client, kw, loc){
   const region = REGIONS[loc.regionIdx || 0] || REGIONS[0];
   let g = (loc.lat != null && loc.lng != null) ? {lat:loc.lat, lng:loc.lng} : null;
   if (!g){
-    try{ g = await seoResolveLocation(client, loc); }catch(e){ g = null; }
+    for (let attempt = 1; attempt <= 2 && !g; attempt++){
+      try{ g = await seoResolveLocation(client, loc); }
+      catch(e){ if (attempt < 2) await seoDelay(1000); }
+    }
   }
   if (!g){ loc.error = 'Couldn\u2019t locate \u201c' + loc.label + '\u201d.'; return; }
   loc.lat = g.lat; loc.lng = g.lng;
   try{
     const depth = state.settings.depth || 100;
-    const data = await seoOrganicQuery(kw.text, {lat:g.lat, lng:g.lng}, region, {depth});
+    const data = await seoOrganicQueryWithRetry(kw.text, {lat:g.lat, lng:g.lng}, region, {depth});
     const organic = data.organic || [];
     let found = null, idx = -1;
     for (let i = 0; i < organic.length; i++){
@@ -6153,167 +6073,6 @@ $('seoAutoWeekdays').addEventListener('click', e => {
   save(); seoLoadAutoScan(c);
 });
 
-/* ---------- Keyword Finder tab: run controls, its own schedule (same
-   engine as Automatic scans, pointed at c.keywordFinder), and results. ---------- */
-/* Location resolution for Keyword Finder uses the exact same mechanism
-   as the Keywords tab: a plain Nominatim lookup into lat/lng, via the
-   same shared nominatim() function GBP's own geocoding relies on. No
-   DataForSEO location database involved, so there's nothing that can
-   reject it as "unrecognized" the way DataForSEO Labs did. */
-$('seoFinderLocation').addEventListener('input', () => {
-  const c = activeSeoClient(); if (!c) return;
-  if (c.keywordFinder.lat != null || c.keywordFinder.lng != null){
-    c.keywordFinder.lat = null; c.keywordFinder.lng = null;
-    save();
-    setStatus('seoFinderStatus', 'Location changed \u2014 click Find again before running.', '');
-  }
-});
-$('seoFinderFindLocBtn').addEventListener('click', async () => {
-  const raw = $('seoFinderLocation').value.trim();
-  if (!raw){ setStatus('seoFinderStatus', 'Type a location first.', 'err'); return; }
-  const c = activeSeoClient(); if (!c) return;
-  const btn = $('seoFinderFindLocBtn');
-  btn.disabled = true;
-  setStatus('seoFinderStatus', 'Looking up ' + raw + '\u2026', 'busy');
-  try{
-    const hit = await nominatim(raw);
-    if (!hit){ setStatus('seoFinderStatus', 'No match. Add the city or province and try again.', 'err'); return; }
-    c.keywordFinder.location = raw;
-    c.keywordFinder.lat = parseFloat(parseFloat(hit.lat).toFixed(7));
-    c.keywordFinder.lng = parseFloat(parseFloat(hit.lon).toFixed(7));
-    save();
-    setStatus('seoFinderStatus', hit.display_name, 'ok');
-  }catch(err){
-    setStatus('seoFinderStatus', 'Lookup failed: ' + ((err && err.message) || err), 'err');
-  }finally{
-    btn.disabled = false;
-  }
-});
-
-
-function seoLoadFinder(c){
-  $('seoFinderWebsite').value = c.website || '(add a website on the Dashboard tab)';
-  $('seoFinderLocation').value = c.keywordFinder.location || '';
-  $('seoFinderRegion').value = c.keywordFinder.regionIdx || 0;
-  const a = c.keywordFinder;
-  $('seoFinderAutoEnabled').checked = !!a.enabled;
-  $('seoFinderAutoBody').style.display = a.enabled ? 'block' : 'none';
-  $('seoFinderAutoCard').classList.toggle('seo-autoscan-on', !!a.enabled);
-  $('seoFinderAutoFrequency').value = a.frequency || 'weekly';
-  $('seoFinderAutoTime').value = a.time || '09:00';
-  $('seoFinderAutoDayOfMonth').value = a.dayOfMonth || 1;
-  document.querySelectorAll('#seoFinderAutoWeekdays .seo-weekday-chip').forEach(btn => {
-    btn.classList.toggle('on', (a.days || []).includes(+btn.dataset.day));
-  });
-  $('seoFinderAutoWeekdaysWrap').style.display = a.frequency === 'weekly' ? '' : 'none';
-  $('seoFinderAutoMonthlyWrap').style.display = a.frequency === 'monthly' ? '' : 'none';
-  seoRenderFinderAutoStatus(c);
-}
-function seoRenderFinderAutoStatus(c){
-  const el = $('seoFinderAutoStatusLine');
-  const a = c.keywordFinder;
-  if (!a.enabled){ el.textContent = ''; return; }
-  const parts = [];
-  const next = seoNextRunEstimateFor(a);
-  if (next) parts.push('<b>Next run:</b> ' + esc(next.toLocaleString([], {weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})));
-  parts.push('<b>Last run:</b> ' + (a.lastRun ? esc(fmtWhen(a.lastRun)) : 'never yet'));
-  el.innerHTML = parts.join(' &nbsp;\u00b7&nbsp; ');
-}
-$('seoFinderLocation').addEventListener('change', () => {
-  const c = activeSeoClient(); if (!c) return;
-  c.keywordFinder.location = $('seoFinderLocation').value.trim();
-  save();
-});
-$('seoFinderRegion').addEventListener('change', () => {
-  const c = activeSeoClient(); if (!c) return;
-  c.keywordFinder.regionIdx = +$('seoFinderRegion').value || 0;
-  save();
-});
-$('seoFinderAutoEnabled').addEventListener('change', () => {
-  const c = activeSeoClient(); if (!c) return;
-  c.keywordFinder.enabled = $('seoFinderAutoEnabled').checked;
-  save(); seoLoadFinder(c);
-});
-$('seoFinderAutoFrequency').addEventListener('change', () => {
-  const c = activeSeoClient(); if (!c) return;
-  c.keywordFinder.frequency = $('seoFinderAutoFrequency').value;
-  save(); seoLoadFinder(c);
-});
-$('seoFinderAutoTime').addEventListener('change', () => {
-  const c = activeSeoClient(); if (!c) return;
-  c.keywordFinder.time = $('seoFinderAutoTime').value || '09:00';
-  save(); seoRenderFinderAutoStatus(c);
-});
-$('seoFinderAutoDayOfMonth').addEventListener('change', () => {
-  const c = activeSeoClient(); if (!c) return;
-  let n = parseInt($('seoFinderAutoDayOfMonth').value, 10);
-  if (isNaN(n) || n < 1) n = 1; if (n > 28) n = 28;
-  c.keywordFinder.dayOfMonth = n; $('seoFinderAutoDayOfMonth').value = n;
-  save(); seoRenderFinderAutoStatus(c);
-});
-$('seoFinderAutoWeekdays').addEventListener('click', e => {
-  const btn = e.target.closest('.seo-weekday-chip'); if (!btn) return;
-  const c = activeSeoClient(); if (!c) return;
-  const day = +btn.dataset.day;
-  const days = new Set(c.keywordFinder.days || []);
-  if (days.has(day) && days.size > 1) days.delete(day); else days.add(day);
-  c.keywordFinder.days = Array.from(days).sort((x, y) => x - y);
-  save(); seoLoadFinder(c);
-});
-$('seoFinderRunBtn').addEventListener('click', async () => {
-  const c = activeSeoClient(); if (!c) return;
-  c.keywordFinder.regionIdx = +$('seoFinderRegion').value || 0;
-  save();
-  if (!c.website || !c.website.trim()){ setStatus('seoFinderStatus', 'Add this client\u2019s website on the Dashboard tab first.', 'err'); return; }
-  if (c.keywordFinder.lat == null || c.keywordFinder.lng == null){ setStatus('seoFinderStatus', 'Click Find next to the location first.', 'err'); return; }
-  if (!c.keywords.length){ setStatus('seoFinderStatus', 'Add at least one keyword on the Keywords tab first \u2014 Keyword Finder expands from what you\u2019re already tracking.', 'err'); return; }
-  const btn = $('seoFinderRunBtn');
-  btn.disabled = true;
-  setStatus('seoFinderStatus', 'Starting\u2026', 'busy');
-  try{
-    const found = await seoRunKeywordFinder(c, (i, total, seed) => {
-      setStatus('seoFinderStatus', 'Checking related searches for \u201c' + seed + '\u201d (' + i + ' / ' + total + ')\u2026', 'busy');
-    });
-    c.keywordFinder.lastRun = Date.now();
-    save();
-    renderSeoFinderResults(c);
-    seoRenderFinderAutoStatus(c);
-    setStatus('seoFinderStatus', found.length
-      ? 'Found ' + found.length + ' related keyword' + (found.length === 1 ? '' : 's') + ' you\u2019re not tracking yet \u2014 click + Add on any of them to verify a real rank.'
-      : 'No new suggestions this time \u2014 try again later, or add a few more keywords first to expand from.', 'ok');
-  }catch(err){
-    setStatus('seoFinderStatus', 'Lookup failed: ' + ((err && err.message) || err), 'err');
-  }finally{
-    btn.disabled = false;
-  }
-});
-function renderSeoFinderResults(c){
-  const wrap = $('seoFinderResults');
-  wrap.innerHTML = '';
-  const items = c.discoveredKeywords || [];
-  $('seoFinderEmpty').style.display = items.length ? 'none' : '';
-  items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = 'seo-finder-row';
-    const text = document.createElement('span');
-    text.className = 'seo-lg-text'; text.textContent = item.keyword;
-    const tag = document.createElement('span');
-    tag.className = 'seo-finder-vol'; tag.textContent = 'not scanned yet';
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button'; addBtn.className = 'btn btn-sm btn-dark';
-    addBtn.textContent = '+ Add';
-    addBtn.title = 'Add to your tracked keywords and verify with a live scan';
-    addBtn.addEventListener('click', () => { addBtn.disabled = true; seoAddDiscoveredKeyword(c, item); });
-    const dismissBtn = document.createElement('button');
-    dismissBtn.type = 'button'; dismissBtn.className = 'seo-loc-del';
-    dismissBtn.title = 'Dismiss \u2014 won\u2019t be suggested again';
-    dismissBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
-    dismissBtn.addEventListener('click', () => seoDismissDiscoveredKeyword(c, item));
-    [text, tag, addBtn, dismissBtn].forEach(el => row.appendChild(el));
-    wrap.appendChild(row);
-  });
-}
-
 function seoAutoScanEligiblePairs(c){
   const pairs = [];
   c.keywords.forEach(k => k.locations.forEach(loc => { if (loc.label && loc.label.trim()) pairs.push({k, loc}); }));
@@ -6331,7 +6090,6 @@ function seoIsScheduleDue(schedule, now){
   return true;
 }
 function seoScheduleDue(c, now){ return seoIsScheduleDue(c.autoScan, now); }
-function seoFinderScheduleDue(c, now){ return seoIsScheduleDue(c.keywordFinder, now); }
 async function seoAutoScanClient(c){
   const pairs = seoAutoScanEligiblePairs(c);
   if (!pairs.length || !c.website || !c.website.trim() || !providerReady()) return 0;
@@ -6356,130 +6114,10 @@ async function seoRunDueSchedules(){
       const active = activeSeoClient();
       if (active && active.id === c.id) seoRenderAutoScanStatus(c);
     }
-    if (seoFinderScheduleDue(c, now)){
-      c.keywordFinder.lastRun = Date.now();
-      save();
-      try{
-        const found = await seoRunKeywordFinder(c);
-        if (found.length) toast('Keyword Finder found ' + found.length + ' new keyword' + (found.length === 1 ? '' : 's') + ' for ' + c.name);
-      }catch(err){
-        console.error('Scheduled Keyword Finder run failed for ' + c.name + ':', err);
-      }
-      save();
-      const active = activeSeoClient();
-      if (active && active.id === c.id){ renderSeoFinderResults(c); seoRenderFinderAutoStatus(c); }
-    }
   }
 }
 setInterval(seoRunDueSchedules, 60 * 1000);
 setTimeout(seoRunDueSchedules, 10000);
-
-/* ---------- Keyword Finder — discovers keywords worth tracking by
-   expanding from the client's own already-tracked keywords, using the
-   exact same live-SERP infrastructure as the Keywords tab (dfsQuery/
-   serperQuery, lat/lng, region) — not DataForSEO's separate Labs
-   product. For each seed keyword, it runs the same live search the
-   Keywords tab would, and pulls the "related searches" and "People also
-   ask" questions Google returns alongside the organic results — those
-   are genuinely adjacent keyword ideas, sourced live rather than from a
-   keyword database that may be stale or may not recognize a location.
-   Results have no rank yet (a related search is a suggestion, not
-   something already verified) — clicking "+ Add" runs a real scan on it
-   immediately via the same accurate engine as everywhere else, so the
-   number that ends up on the tracked list is always freshly verified. ---------- */
-function seoExtractSerpSuggestions(rawData, provider){
-  const out = new Set();
-  if (provider === 'serper'){
-    (rawData.relatedSearches || []).forEach(x => {
-      const q = ((x && (x.query || x.text)) || '').trim();
-      if (q) out.add(q);
-    });
-    (rawData.peopleAlsoAsk || []).forEach(x => {
-      const q = ((x && (x.question || x.title)) || '').trim();
-      if (q) out.add(q);
-    });
-  } else {
-    const result = ((((rawData.tasks || [])[0] || {}).result || [])[0]) || {};
-    const items = result.items || [];
-    items.forEach(it => {
-      if (it.type === 'related_searches'){
-        const sub = it.items || it.related_searches || [];
-        sub.forEach(s => {
-          const q = (typeof s === 'string' ? s : ((s && (s.query || s.title || s.keyword)) || '')).trim();
-          if (q) out.add(q);
-        });
-      }
-      if (it.type === 'people_also_ask'){
-        const sub = it.items && it.items.length ? it.items : [it];
-        sub.forEach(s => {
-          const q = ((s && (s.title || s.question)) || '').trim();
-          if (q) out.add(q);
-        });
-      }
-    });
-  }
-  return Array.from(out);
-}
-const SEO_FINDER_MAX_SEEDS = 15; // keeps a run to a bounded number of live searches
-async function seoRunKeywordFinder(c, onProgress){
-  if (!c.website || !c.website.trim()) throw new Error('Add this client\u2019s website on the Dashboard tab first.');
-  if (c.keywordFinder.lat == null || c.keywordFinder.lng == null) throw new Error('Click Find next to the location first.');
-  if (!c.keywords.length) throw new Error('Add at least one keyword on the Keywords tab first \u2014 Keyword Finder expands from what you\u2019re already tracking.');
-  if (!providerReady()) throw new Error('Search provider isn\u2019t configured yet (GBP Locations \u2192 step 4).');
-  const region = REGIONS[c.keywordFinder.regionIdx || 0] || REGIONS[0];
-  const provider = state.settings.provider || 'dataforseo';
-  const g = {lat: c.keywordFinder.lat, lng: c.keywordFinder.lng};
-  const depth = state.settings.depth || 100;
-  const seeds = c.keywords.slice(0, SEO_FINDER_MAX_SEEDS).map(k => k.text);
-  const trackedSet = new Set(c.keywords.map(k => k.text.trim().toLowerCase()));
-  const dismissedSet = new Set((c.dismissedFinderKeywords || []).map(s => s.toLowerCase()));
-  const found = new Map(); // lowercase -> display text
-  for (let i = 0; i < seeds.length; i++){
-    const seed = seeds[i];
-    if (onProgress) onProgress(i + 1, seeds.length, seed);
-    try{
-      const raw = provider === 'serper'
-        ? await serperQuery(seed, g, region, 'web', {depth})
-        : await dfsQuery(seed, g, region, 'web', {depth});
-      seoExtractSerpSuggestions(raw, provider).forEach(s => {
-        const key = s.trim().toLowerCase();
-        if (key && !trackedSet.has(key) && !dismissedSet.has(key) && !found.has(key)){
-          found.set(key, s.trim());
-        }
-      });
-    }catch(err){
-      if (err && err.fatal) throw err; // a bad credential etc. should stop the whole run
-      // otherwise: one seed failing (rate limit, empty result) shouldn't stop the rest
-    }
-  }
-  const fresh = Array.from(found.values()).map(text => ({keyword: text, position: null, volume: null, url: ''}));
-  c.discoveredKeywords = fresh;
-  return fresh;
-}
-async function seoAddDiscoveredKeyword(c, item){
-  const label = (c.keywordFinder.location || '').trim();
-  let k = c.keywords.find(x => x.text.trim().toLowerCase() === item.keyword.trim().toLowerCase());
-  if (!k){ k = {id: uid(), text: item.keyword, locations: []}; c.keywords.push(k); }
-  let newLoc = null;
-  if (label && !k.locations.some(l => l.label.toLowerCase() === label.toLowerCase())){
-    newLoc = blankSeoLocation(label, c.keywordFinder.regionIdx || 0);
-    k.locations.push(newLoc);
-  }
-  c.discoveredKeywords = (c.discoveredKeywords || []).filter(x => x !== item);
-  save(); renderSeoFinderResults(c); renderSeoTree();
-  toast('Added \u201c' + item.keyword + '\u201d to your tracked keywords');
-  // Verify with a real live scan for consistency with the rest of the
-  // app — Labs data is discovery-grade, the live SERP check is the
-  // authoritative number everywhere else in this tool.
-  if (newLoc) await seoScanAndRender(c, [{k, loc: newLoc}]);
-  else renderSeoKeywords();
-}
-function seoDismissDiscoveredKeyword(c, item){
-  c.dismissedFinderKeywords = c.dismissedFinderKeywords || [];
-  c.dismissedFinderKeywords.push(item.keyword);
-  c.discoveredKeywords = (c.discoveredKeywords || []).filter(x => x !== item);
-  save(); renderSeoFinderResults(c);
-}
 
 const SEO_CLIENT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1RxJIePQoMlcjytGTWa8MPiv4uGoSYthcnV8siOKScmc/edit?usp=sharing';
 
@@ -6980,6 +6618,7 @@ function renderSeoBulkBar(c){
   $('seoApplyLocBtn').disabled = n === 0;
   $('seoDeleteSelBtn').disabled = n === 0;
   $('seoRemoveLocBtn').disabled = n === 0;
+  $('seoRescanSelBtn').disabled = n === 0;
   const total = c.keywords.length;
   $('seoSelectAllCheck').checked = total > 0 && n === total;
   $('seoSelectAllCheck').indeterminate = n > 0 && n < total;
@@ -7083,6 +6722,20 @@ $('seoDeleteSelBtn').addEventListener('click', () => {
   seoSelectedKwIds.clear();
   save(); renderSeoKeywords();
   toast(n + ' keyword' + (n === 1 ? '' : 's') + ' deleted');
+});
+
+/* ---------- rescan only the selected keywords, across all of their
+   locations — same accurate engine and progress bar as "Scan all
+   keywords", just scoped to the current selection. ---------- */
+$('seoRescanSelBtn').addEventListener('click', () => {
+  const c = activeSeoClient(); if (!c) return;
+  if (!seoSelectedKwIds.size) return;
+  const pairs = [];
+  c.keywords.forEach(k => {
+    if (!seoSelectedKwIds.has(k.id)) return;
+    k.locations.forEach(loc => pairs.push({k, loc}));
+  });
+  seoScanAndRender(c, pairs);
 });
 
 /* ---------- remove a location from every selected keyword ---------- */
@@ -7376,8 +7029,6 @@ function seoShowTab(v){
   document.querySelectorAll('#seoStage .seo-mode').forEach(b => b.classList.toggle('on', b.dataset.seoview === v));
   $('seoview-dashboard').classList.toggle('on', v === 'dashboard');
   $('seoview-keywords').classList.toggle('on', v === 'keywords');
-  $('seoview-finder').classList.toggle('on', v === 'finder');
-  if (v === 'finder'){ const c = activeSeoClient(); if (c) renderSeoFinderResults(c); }
 }
 document.querySelectorAll('#seoStage .seo-mode').forEach(btn => {
   btn.addEventListener('click', () => seoShowTab(btn.dataset.seoview));
@@ -7413,13 +7064,11 @@ function renderSeoAll(){
   $('seoEmptyState').style.display = c ? 'none' : '';
   $('seoDashboardView').style.display = c ? 'block' : 'none';
   $('seoKeywordsView').style.display = c ? 'block' : 'none';
-  $('seoFinderView').style.display = c ? 'block' : 'none';
   renderSeoCrumbs();
   if (!c) return;
   seoLoadDashboard();
   renderSeoStats(c);
   renderSeoKeywords();
-  seoLoadFinder(c);
   $('seoProviderHint').style.display = providerReady() ? 'none' : 'block';
 }
 
@@ -7479,7 +7128,6 @@ renderAll = function(){
 fillRegions($('seoNewRegion'));
 fillRegions($('seoBulkDefaultRegion'));
 fillRegions($('seoApplyLocRegion'));
-fillRegions($('seoFinderRegion'));
 
 // Never take over the public embed view — it uses the same #appShell.
 if (typeof EMBED_ID === 'undefined' || !EMBED_ID){
